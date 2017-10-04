@@ -10,6 +10,17 @@
 
 #include <sys/types.h>
 #include <stdint.h>
+
+//NAND FLASH METHODS
+
+void createNANDFLASH(int32_t *NANDFLASH, int32_t **entriesOfNAND, int stdimagesize, uint32_t numberOfEntriesNAND, int numberOfImages);
+
+int readNAND(int32_t *nandSrc, uint16_t rows, uint16_t cols, uint32_t sdDst);
+
+int writeNAND(uint32_t *sdSrc, uint16_t rows, uint16_t cols, int32_t nandDst);
+//END OF NAND FLASH METHODS
+
+
 int preprocessing_zero(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint32_t sdDst);
 
 /**

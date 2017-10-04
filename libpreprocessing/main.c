@@ -32,7 +32,6 @@
 int main()
 {
 
-
 	int32_t *SDRAM;
 	int32_t *img01;
 	int32_t *img02;
@@ -49,21 +48,6 @@ int main()
 	int32_t *tmp2;
 	int32_t *tmp3;
 
-
-
-
-	//*********************
-	int32_t *NANDFLASH;
-
-
-	//*********************
-
-
-
-/*
-	int32_t *med7;
-	int32_t *rad8;
-*/
 	int32_t *min, *max;
 	int32_t M=0;
 	int32_t m=0;
@@ -98,10 +82,6 @@ int main()
 	SDRAM = (int32_t*) malloc(numberOfMemoryInput*stdimagesize*sizeof(int32_t));
 	inputimg = (int*) malloc((uint32_t)stdimagesize*sizeof(int));			//Only one image
 
-	NANDFLASH = (int32_t*) malloc(numberOfMemoryInput*stdimagesize*sizeof(int32_t));
-
-
-
 	printf("Load images in Virtual RAM!\n");
 
 	for(unsigned int i = 0; i < number_image; i++) {
@@ -115,49 +95,6 @@ int main()
 		for (int j = stdimagesize; j < stdimagesize*2; j++)
 			//SDRAM[j]=(int32_t)eve_fp_int2s32(inputimg[j], FP32_FWL );
 			SDRAM[j]=inputimg[j-stdimagesize];
-	}
-
-
-	printf("Load images in NAND FLASH!\n");
-
-	int dispRows = 9;
-	int dispCols = 2;
-	int **disp = (int **)malloc(dispRows * sizeof(int*));
-	for(int i = 0; i < dispRows; i++) disp[i] = (int *)malloc(dispCols * sizeof(int));
-
-	int MAXCHAR = 1000;
-	FILE *fp2;
-	char str[MAXCHAR];
-	char* filename = "disp.txt";
-
-	fp2 = fopen(filename, "r");
-	if (fp2 == NULL){
-		printf("Could not open file %s",filename);
-		return 1;
-	}
-	int indexRow = 0, indexCol = 0;
-
-	while (fgets(str, MAXCHAR, fp2) != NULL){
-		char *ch;
-		ch = strtok(str, " ");
-		while (ch != NULL) {
-			if(indexCol == 2) indexCol = 0;
-			disp[indexRow][indexCol] = atoi(ch);
-			indexCol++;
-			ch = strtok(NULL, " ,");
-		}
-		indexRow++;
-	}
-	fclose(fp2);
-
-	char fileName[12] = "im/im00.fits";
-
-	for(unsigned int i = 0; i < 9; i++) {
-		fileName[6] = 48 + i;
-		printf("%s\n", fileName);
-		FITS_getImage(fileName, inputimg, stdimagesize, &nkeys, &header);
-		for (int j = 0; j < stdimagesize; j++)
-			SDRAM[i*stdimagesize + j]=(int32_t)eve_fp_int2s32(inputimg[j], FP32_FWL );
 	}
 
 	/*
@@ -256,9 +193,18 @@ int main()
 	preprocessing_vmem_setEntry(tmp2Sdram, tmp2Size, tmp2DatasetId, tmp2);
 	preprocessing_vmem_setEntry(tmp3Sdram, tmp3Size, tmp3DatasetId, tmp3);
 
-
-
 	preprocessing_vmem_print();
+
+	//NAND FLASH Memory
+	int32_t *NANDFLASH;
+	int32_t numberOfEntriesNAND = 128;
+	int32_t **entriesOfNAND = (int32_t **) malloc(numberOfEntriesNAND*sizeof(int32_t *));
+	NANDFLASH = (int32_t*) malloc(numberOfEntriesNAND*stdimagesize*sizeof(int32_t));
+	entriesOfNAND = (int32_t **) malloc(numberOfEntriesNAND*sizeof(int32_t *));
+
+	createNANDFLASH(NANDFLASH, entriesOfNAND, stdimagesize, numberOfEntriesNAND, 9);
+
+	//END NAND FLASH Memory
 
 	printf("Cleaning tmps\n");
 

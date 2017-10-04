@@ -23,6 +23,140 @@
 #include <stdlib.h>
 #include <string.h>
 
+//NAND FLASH METHODS
+void createNANDFLASH(int32_t *NANDFLASH, int32_t **entriesOfNAND, int stdimagesize, uint32_t numberOfEntriesNAND, int numberOfImages){
+
+	int nkeys;
+	char **header;
+	int *inputimg = (int*) malloc((uint32_t)stdimagesize*sizeof(int));			//Only one image
+
+	printf("Load images in NAND FLASH!\n");
+	char fileName[12] = "im/im00.fits";
+	for(unsigned int i = 0; i < numberOfImages; i++) {
+		fileName[6] = 48 + i;
+		printf("%s\n", fileName);
+		FITS_getImage(fileName, inputimg, stdimagesize, &nkeys, &header);
+		for (int j = 0; j < stdimagesize; j++)
+			NANDFLASH[i*stdimagesize + j]=(int32_t)eve_fp_int2s32(inputimg[j], FP32_FWL );
+	}
+
+	//	1.) Load image data to NAND Flash:
+	uint32_t 	img1Nand = 0;
+	uint32_t 	img2Nand = img1Nand + stdimagesize;
+	uint32_t	img3Nand = img2Nand + stdimagesize;
+	uint32_t	img4Nand = img3Nand + stdimagesize;
+	uint32_t	img5Nand = img4Nand + stdimagesize;
+	uint32_t	img6Nand = img5Nand + stdimagesize;
+	uint32_t	img7Nand = img6Nand + stdimagesize;
+	uint32_t	img8Nand = img7Nand + stdimagesize;
+	uint32_t	img9Nand = img8Nand + stdimagesize;
+
+	entriesOfNAND[0]=(NANDFLASH+img1Nand);
+	entriesOfNAND[1]=(NANDFLASH+img2Nand);
+	entriesOfNAND[2]=(NANDFLASH+img3Nand);
+	entriesOfNAND[3]=(NANDFLASH+img4Nand);
+	entriesOfNAND[4]=(NANDFLASH+img5Nand);
+	entriesOfNAND[5]=(NANDFLASH+img6Nand);
+	entriesOfNAND[6]=(NANDFLASH+img7Nand);
+	entriesOfNAND[7]=(NANDFLASH+img8Nand);
+	entriesOfNAND[8]=(NANDFLASH+img9Nand);
+
+	//READ DISP
+	int MAXCHAR = 1000;
+	FILE *fp2;
+	char str[MAXCHAR];
+	char* filename = "disp.txt";
+
+	fp2 = fopen(filename, "r");
+	if (fp2 == NULL){
+		printf("Could not open file %s",filename);
+		return;
+	}
+
+	int index=0;
+	while (fgets(str, MAXCHAR, fp2) != NULL){
+		char *ch;
+		ch = strtok(str, " ");
+		while (ch != NULL) {
+			NANDFLASH[numberOfImages*stdimagesize + index]=(int32_t)eve_fp_int2s32(atoi(ch), FP32_FWL );
+			index++;
+			ch = strtok(NULL, " ,");
+		}
+	}
+	fclose(fp2);
+
+	uint32_t	dispNand = img9Nand + stdimagesize;
+	entriesOfNAND[9] = (NANDFLASH+dispNand);
+}
+
+int readNAND(int32_t *nandSrc, uint16_t rows, uint16_t cols, uint32_t sdDst){
+	int status = PREPROCESSING_SUCCESSFUL;
+	unsigned int size = (unsigned int)(rows) * cols;
+	unsigned int p = 0;
+
+	int32_t* dst = preprocessing_vmem_getDataAddress(sdDst);
+
+	// Check whether given rows and columns are in a valid range.
+	if (!preprocessing_vmem_isProcessingSizeValid(sdDst, rows, cols)){
+		return PREPROCESSING_INVALID_SIZE;
+	}
+
+	// Process.
+	for (unsigned int r = 0; r < rows; r++)
+	{
+		for (unsigned int c = 0; c < cols; c++)
+		{
+			p = r * cols + c;
+
+			// Check for valid pointer position.
+			PREPROCESSING_DEF_CHECK_POINTER(dst, p, size);
+
+			dst[p] = nandSrc[p];
+
+			if (dst[p] == EVE_FP32_NAN)
+			{
+				status = PREPROCESSING_INVALID_NUMBER;
+			}
+		}
+	}
+
+	return status;
+}
+
+int writeNAND(uint32_t *sdSrc, uint16_t rows, uint16_t cols, int32_t nandDst){
+	int status = PREPROCESSING_SUCCESSFUL;
+	unsigned int size = (unsigned int)(rows) * cols;
+	unsigned int p = 0;
+
+	const int32_t* src = preprocessing_vmem_getDataAddress(sdSrc);
+
+	// Check whether given rows and columns are in a valid range.
+	if (!preprocessing_vmem_isProcessingSizeValid(sdSrc, rows, cols)){
+		return PREPROCESSING_INVALID_SIZE;
+	}
+
+	// Process.
+	for (unsigned int r = 0; r < rows; r++)
+	{
+		for (unsigned int c = 0; c < cols; c++)
+		{
+			p = r * cols + c;
+
+			// Check for valid pointer position.
+			PREPROCESSING_DEF_CHECK_POINTER(src, p, size);
+
+			nandDst[p]=src[p];
+
+			if (src[p] == EVE_FP32_NAN)
+			{
+				status = PREPROCESSING_INVALID_NUMBER;
+			}
+		}
+	}
+
+	return status;
+}
+//END OF NAND FLASH METHODS
 
 int preprocessing_zero(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint32_t sdDst)
 {
