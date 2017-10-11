@@ -10,14 +10,14 @@
 
 #include <sys/types.h>
 #include <stdint.h>
+#include "../FITS_Interface.h"
 
 //NAND FLASH METHODS
-
-void createNANDFLASH(int32_t *NANDFLASH, int32_t **entriesOfNAND, int stdimagesize, uint32_t numberOfEntriesNAND, int numberOfImages);
+void createNANDFLASH(int32_t *NANDFLASH, int32_t **entriesOfNAND, int stdimagesize,  int numberOfImages);
 
 int readNAND(int32_t *nandSrc, uint16_t rows, uint16_t cols, uint32_t sdDst);
 
-int writeNAND(uint32_t *sdSrc, uint16_t rows, uint16_t cols, int32_t nandDst);
+int writeNAND(uint32_t sdSrc, uint16_t rows, uint16_t cols, int32_t *nandDst);
 //END OF NAND FLASH METHODS
 
 
@@ -27,7 +27,6 @@ int preprocessing_zero(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint32_t sd
      * Generates mask of an image pixel by pixel.
      *
      * @param sdSrc1 the VMEM (SDRAM) address of image 1.
-     * @param sdSrc2 the VMEM (SDRAM) address of global mask to be updated.
      * @param rows   the number of image rows.
      * @param cols   the number of image columns.
      * @param index  the index of the current image.
@@ -37,7 +36,7 @@ int preprocessing_zero(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint32_t sd
      *
      * @return PREPROCESSING_SUCCESSFUL on success, failure code otherwise.
      */
-int preprocessing_arith_maskImages(uint32_t sdSrc1, uint32_t sdSrc2,
+int preprocessing_arith_maskImages(uint32_t sdSrc1,
             uint16_t rows, uint16_t cols, uint16_t index, uint32_t iMin, uint32_t iMax, uint32_t sdDst);
 
 /**
@@ -154,38 +153,6 @@ int preprocessing_log10Image(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint3
 int preprocessing_arith_doGetConst(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3, uint32_t sdSrc4,
 		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3,
 		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, uint32_t sdDst1, uint32_t sdDst2);
-
-/**
-     * Calculate constant term of two images
-     *
-     * @param sdSrc1 the VMEM (SDRAM) address of image 1.
-     * @param sdSrc2 the VMEM (SDRAM) address of image 2.
-     * @param sdSrc3 the VMEM (SDRAM) address of mask.
-     * @param sdSrc4 the VMEM (SDRAM) address of log10 image1 (output).
-     * @param sdSrc5 the VMEM (SDRAM) address of log10 image2 (output).
-     * @param sdSrc6 the VMEM (SDRAM) address of mask of image 1 (output).
-     * @param sdSrc7 the VMEM (SDRAM) address of mask of image 2 (output).
-     * @param sdTmp1 the VMEM (SDRAM) address of temporal image.
-     * @param sdTmp2 the VMEM (SDRAM) address of temporal image.
-     * @param sdTmp3 the VMEM (SDRAM) address of temporal image.
-     * @param rows   the number of image rows.
-     * @param cols   the number of image columns.
-     * @param dx  	 the offset X.
-     * @param dy     the offset Y.
-     * @param indexImage1  	 the index of image 1.
-     * @param indexImage2    the index of image 2.
-     * @param sdDst1  the VMEM (SDRAM) address of const.
-     * @param sdDst2  the VMEM (SDRAM) address of pixCount.
-     *
-     * @return PREPROCESSING_SUCCESSFUL on success, failure code otherwise.
-     */
-int preprocessing_arith_getConst(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3,
-		uint32_t sdSrc4, uint32_t sdSrc5, uint32_t sdSrc6, uint32_t sdSrc7,
-		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3,
-		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy,
-		uint16_t indexImage1, uint16_t indexImage2,
-		uint32_t sdDst1, uint32_t sdDst2);
-
 
 /**
      * Calculate gain of two images for doIteration function

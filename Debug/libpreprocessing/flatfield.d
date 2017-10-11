@@ -5,6 +5,7 @@ libpreprocessing/flatfield.o: ../libpreprocessing/flatfield.c \
  ../libpreprocessing/preprocessing/mydef.h \
  ../libpreprocessing/preprocessing/vmem.h \
  ../libpreprocessing/preprocessing/flatfield.h \
+ ../libpreprocessing/preprocessing/../FITS_Interface.h \
  ../libpreprocessing/../libeve/eve/fixed_point.h
 
 ../libpreprocessing/preprocessing/ana.h:
@@ -18,5 +19,7 @@ libpreprocessing/flatfield.o: ../libpreprocessing/flatfield.c \
 ../libpreprocessing/preprocessing/vmem.h:
 
 ../libpreprocessing/preprocessing/flatfield.h:
+
+../libpreprocessing/preprocessing/../FITS_Interface.h:
 
 ../libpreprocessing/../libeve/eve/fixed_point.h:

@@ -24,14 +24,28 @@
 #include <string.h>
 
 //NAND FLASH METHODS
-void createNANDFLASH(int32_t *NANDFLASH, int32_t **entriesOfNAND, int stdimagesize, uint32_t numberOfEntriesNAND, int numberOfImages){
+
+uint32_t *i1NAND;
+uint32_t *i2NAND;
+uint32_t *i3NAND;
+uint32_t *i4NAND;
+uint32_t *i5NAND;
+uint32_t *i6NAND;
+uint32_t *i7NAND;
+uint32_t *i8NAND;
+uint32_t *i9NAND;
+uint32_t *maskNAND;
+uint32_t *dispNAND;
+
+
+void createNANDFLASH(int32_t *NANDFLASH, int32_t **entriesOfNAND, int stdimagesize,  int numberOfImages){
 
 	int nkeys;
 	char **header;
 	int *inputimg = (int*) malloc((uint32_t)stdimagesize*sizeof(int));			//Only one image
 
 	printf("Load images in NAND FLASH!\n");
-	char fileName[12] = "im/im00.fits";
+	char fileName[13] = "im/im00.fits";
 	for(unsigned int i = 0; i < numberOfImages; i++) {
 		fileName[6] = 48 + i;
 		printf("%s\n", fileName);
@@ -39,6 +53,13 @@ void createNANDFLASH(int32_t *NANDFLASH, int32_t **entriesOfNAND, int stdimagesi
 		for (int j = 0; j < stdimagesize; j++)
 			NANDFLASH[i*stdimagesize + j]=(int32_t)eve_fp_int2s32(inputimg[j], FP32_FWL );
 	}
+
+	char maskFileName[13] = "im/mask.fits";
+	printf("%s\n", maskFileName);
+	FITS_getImage(maskFileName, inputimg, stdimagesize, &nkeys, &header);
+	for (int j = 0; j < stdimagesize; j++)
+		NANDFLASH[MASK_INDEX*stdimagesize + j]=(int32_t)eve_fp_int2s32(inputimg[j], FP32_FWL );
+
 
 	//	1.) Load image data to NAND Flash:
 	uint32_t 	img1Nand = 0;
@@ -50,16 +71,21 @@ void createNANDFLASH(int32_t *NANDFLASH, int32_t **entriesOfNAND, int stdimagesi
 	uint32_t	img7Nand = img6Nand + stdimagesize;
 	uint32_t	img8Nand = img7Nand + stdimagesize;
 	uint32_t	img9Nand = img8Nand + stdimagesize;
+	uint32_t	maskNand = img9Nand + stdimagesize;
+	uint32_t	dispNand = maskNand + stdimagesize;
 
-	entriesOfNAND[0]=(NANDFLASH+img1Nand);
-	entriesOfNAND[1]=(NANDFLASH+img2Nand);
-	entriesOfNAND[2]=(NANDFLASH+img3Nand);
-	entriesOfNAND[3]=(NANDFLASH+img4Nand);
-	entriesOfNAND[4]=(NANDFLASH+img5Nand);
-	entriesOfNAND[5]=(NANDFLASH+img6Nand);
-	entriesOfNAND[6]=(NANDFLASH+img7Nand);
-	entriesOfNAND[7]=(NANDFLASH+img8Nand);
-	entriesOfNAND[8]=(NANDFLASH+img9Nand);
+	entriesOfNAND[0] =(NANDFLASH+img1Nand);
+	entriesOfNAND[1] =(NANDFLASH+img2Nand);
+	entriesOfNAND[2] =(NANDFLASH+img3Nand);
+	entriesOfNAND[3] =(NANDFLASH+img4Nand);
+	entriesOfNAND[4] =(NANDFLASH+img5Nand);
+	entriesOfNAND[5] =(NANDFLASH+img6Nand);
+	entriesOfNAND[6] =(NANDFLASH+img7Nand);
+	entriesOfNAND[7] =(NANDFLASH+img8Nand);
+	entriesOfNAND[8] =(NANDFLASH+img9Nand);
+	entriesOfNAND[9] =(NANDFLASH+maskNand);
+	entriesOfNAND[10]=(NANDFLASH+dispNand);
+
 
 	//READ DISP
 	int MAXCHAR = 1000;
@@ -78,15 +104,14 @@ void createNANDFLASH(int32_t *NANDFLASH, int32_t **entriesOfNAND, int stdimagesi
 		char *ch;
 		ch = strtok(str, " ");
 		while (ch != NULL) {
-			NANDFLASH[numberOfImages*stdimagesize + index]=(int32_t)eve_fp_int2s32(atoi(ch), FP32_FWL );
+			NANDFLASH[DISP_INDEX*stdimagesize + index]=(int32_t)eve_fp_int2s32(atoi(ch), FP32_FWL );
 			index++;
 			ch = strtok(NULL, " ,");
 		}
 	}
 	fclose(fp2);
 
-	uint32_t	dispNand = img9Nand + stdimagesize;
-	entriesOfNAND[9] = (NANDFLASH+dispNand);
+	printf("Images loaded successfully!\n");
 }
 
 int readNAND(int32_t *nandSrc, uint16_t rows, uint16_t cols, uint32_t sdDst){
@@ -123,7 +148,7 @@ int readNAND(int32_t *nandSrc, uint16_t rows, uint16_t cols, uint32_t sdDst){
 	return status;
 }
 
-int writeNAND(uint32_t *sdSrc, uint16_t rows, uint16_t cols, int32_t nandDst){
+int writeNAND(uint32_t sdSrc, uint16_t rows, uint16_t cols, int32_t *nandDst){
 	int status = PREPROCESSING_SUCCESSFUL;
 	unsigned int size = (unsigned int)(rows) * cols;
 	unsigned int p = 0;
@@ -197,19 +222,18 @@ int preprocessing_zero(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint32_t sd
     return status;
 }
 
-int preprocessing_arith_maskImages(uint32_t sdSrc1, uint32_t sdSrc2,
+int preprocessing_arith_maskImages(uint32_t sdSrc1,
             uint16_t rows, uint16_t cols, uint16_t index, uint32_t iMin, uint32_t iMax, uint32_t sdDst){
     int status = PREPROCESSING_SUCCESSFUL;
     unsigned int size = (unsigned int)(rows) * cols;
     unsigned int p = 0;
+    unsigned int mskTmp = 0;
 
-    const int32_t* src1 = preprocessing_vmem_getDataAddress(sdSrc1);
-    int32_t* src2 = preprocessing_vmem_getDataAddress(sdSrc2);
+    int32_t* src1 = preprocessing_vmem_getDataAddress(sdSrc1);
     int32_t* dst = preprocessing_vmem_getDataAddress(sdDst);
 
     // Check whether given rows and columns are in a valid range.
     if ((!preprocessing_vmem_isProcessingSizeValid(sdSrc1, rows, cols))
-            || (!preprocessing_vmem_isProcessingSizeValid(sdSrc2, rows, cols))
             || (!preprocessing_vmem_isProcessingSizeValid(sdDst, rows, cols)))
     {
         return PREPROCESSING_INVALID_SIZE;
@@ -223,14 +247,17 @@ int preprocessing_arith_maskImages(uint32_t sdSrc1, uint32_t sdSrc2,
 
 			// Check for valid pointer position.
 			PREPROCESSING_DEF_CHECK_POINTER(src1, p, size)
-			PREPROCESSING_DEF_CHECK_POINTER(src2, p, size)
 			PREPROCESSING_DEF_CHECK_POINTER(dst, p, size)
 
 			if( (eve_fp_compare32(src1 + p, &iMin) == 1 ) && ((eve_fp_compare32(src1 + p, &iMax) == -1 ) || (eve_fp_compare32(src1 + p, &iMax) == 0 )) ){
-				src2[p] = (FP32_BINARY_TRUE << index);
+				mskTmp = 1;
+			}
+			else{
+				mskTmp = 0;
+				src1[p] = 0;
 			}
 
-			dst[p] = eve_fp_multiply32(src1[p], src2[p], FP32_FWL);
+			dst[p] = dst[p] | ((mskTmp << index) << FP32_FWL);
 		}
 	}
 
@@ -253,7 +280,6 @@ int preprocessing_arith_ROI(uint32_t sdSrc, uint16_t rows, uint16_t cols,
 	unsigned int jyh = min(0, -dy) + rows; 	//Row
 	unsigned int jxl = max(0, -dx); 		//Column
 	unsigned int jxh = min(0, -dx) + cols; 	//Column
-
 
 	// Check whether given rows and columns are in a valid range.
 	if ((!preprocessing_vmem_isProcessingSizeValid(sdSrc, rows, cols))
@@ -501,7 +527,6 @@ int preprocessing_arith_mean(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, ui
 	uint32_t sqrtOfDivisionMinusPow = eve_fp_double2s32( sqrt(eve_fp_signed32ToDouble( divisionMinusPow , FP32_FWL)), FP32_FWL);
 	dst[1] = eve_fp_multiply32( fiveFixed, sqrtOfDivisionMinusPow, FP32_FWL);
 
-	dst[1] = 5*sqrt(sum3/npix-dst[0]*dst[0]);								//return five_sigma
 	dst[2] = npixFixed;														//number of pixels
 	dst[3] = sum2;//
 
@@ -610,17 +635,10 @@ int preprocessing_arith_doGetConst(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sd
 		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, uint32_t sdDst1, uint32_t sdDst2){
 
 	int status = PREPROCESSING_SUCCESSFUL;
-	unsigned int size = (unsigned int)(rows) * cols;
+	int stdimagesize = rows*cols;
 
-	const int32_t* src1 = preprocessing_vmem_getDataAddress(sdSrc1); //Log of Image 1
-	const int32_t* src2 = preprocessing_vmem_getDataAddress(sdSrc2); //Log of Image 2
-	const int32_t* src3 = preprocessing_vmem_getDataAddress(sdSrc3); //Mask of image 1
-	const int32_t* src4 = preprocessing_vmem_getDataAddress(sdSrc4); //Mask of image 2
-	int32_t* tmp1 = preprocessing_vmem_getDataAddress(sdTmp1);		 //Tmp1
-	int32_t* tmp2 = preprocessing_vmem_getDataAddress(sdTmp2);		 //Tmp2
-	int32_t* tmp3 = preprocessing_vmem_getDataAddress(sdTmp3);		 //Tmp3
-	int32_t* dst1 = preprocessing_vmem_getDataAddress(sdDst1);		 //Const
-	int32_t* dst2 = preprocessing_vmem_getDataAddress(sdDst2);		 //PixCount
+	const int32_t* tmp1 = preprocessing_vmem_getDataAddress(sdTmp1);
+	const int32_t* tmp2 = preprocessing_vmem_getDataAddress(sdTmp2);
 
 	// Check whether given rows and columns are in a valid range.
 	if ((!preprocessing_vmem_isProcessingSizeValid(sdSrc1, rows, cols))
@@ -634,81 +652,30 @@ int preprocessing_arith_doGetConst(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sd
 	}
 
 	//Calculate ROIs of masks
-	if((status = preprocessing_arith_ROI(src3 , rows, cols, -dx, -dy, tmp1)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_ROI(src4 , rows, cols,  dx,  dy, tmp2)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_ROI(sdSrc3 , rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_ROI(sdSrc4 , rows, cols,  dx,  dy, sdTmp2)) != PREPROCESSING_SUCCESSFUL) return status;
 
 	//Multiply ROIs to obtain mksDouble
-	if((status = preprocessing_arith_multiplyImages(tmp1, tmp2, rows, cols, tmp3)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp3)) != PREPROCESSING_SUCCESSFUL) return status;
+
+	if((status = preprocessing_zero(sdTmp1, ROWS, COLS, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_zero(sdTmp2, ROWS, COLS, sdTmp2)) != PREPROCESSING_SUCCESSFUL) return status;
 
 	//Calculate ROI of images
-	if((status = preprocessing_arith_ROI(src1 , rows, cols, -dx, -dy, tmp1)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_ROI(src2 , rows, cols,  dx,  dy, tmp2)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_ROI(sdSrc1 , rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_ROI(sdSrc2 , rows, cols,  dx,  dy, sdTmp2)) != PREPROCESSING_SUCCESSFUL) return status;
 
 	//Calculate Diff
-	if((status = preprocessing_arith_subtractImages(tmp1, tmp2, rows, cols, tmp1)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_multiplyImages(tmp1, tmp3, rows, cols, tmp1)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_subtractImages(sdTmp1, sdTmp2, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp3, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
 
 	//Apply diff to const
-	if((status = preprocessing_arith_addROI(dst1, tmp1, rows, cols, -dx, -dy, dst1)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_substractROI(dst1, tmp1, rows, cols, dx, dy, dst1)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_addROI(sdDst1, sdTmp1, rows, cols, -dx, -dy, sdDst1)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_substractROI(sdDst1, sdTmp1, rows, cols, dx, dy, sdDst1)) != PREPROCESSING_SUCCESSFUL) return status;
 
 	//Apply mskDouble to pixCount
-	if((status = preprocessing_arith_addROI(dst2, tmp3, rows, cols, -dx, -dy, dst2)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_addROI(dst2, tmp3, rows, cols,  dx,  dy, dst2)) != PREPROCESSING_SUCCESSFUL) return status;
-
-	return status;
- }
-
-int preprocessing_arith_getConst(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3,
-		uint32_t sdSrc4, uint32_t sdSrc5, uint32_t sdSrc6, uint32_t sdSrc7,
-		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3,
-		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy,
-		uint16_t indexImage1, uint16_t indexImage2,
-		uint32_t sdDst1, uint32_t sdDst2){
-
-	int status = PREPROCESSING_SUCCESSFUL;
-	unsigned int size = (unsigned int)(rows) * cols;
-
-	const int32_t* src1 = preprocessing_vmem_getDataAddress(sdSrc1); //Image 1
-	const int32_t* src2 = preprocessing_vmem_getDataAddress(sdSrc2); //Image 2
-	const int32_t* src3 = preprocessing_vmem_getDataAddress(sdSrc3); //Mask of all images
-	int32_t* src4 = preprocessing_vmem_getDataAddress(sdSrc4); 		 //Log of image 1
-	int32_t* src5 = preprocessing_vmem_getDataAddress(sdSrc5); 		 //Log of image 2
-	int32_t* src6 = preprocessing_vmem_getDataAddress(sdSrc6); 		 //Mask of image 1
-	int32_t* src7 = preprocessing_vmem_getDataAddress(sdSrc7); 		 //Mask of image 2
-	int32_t* tmp1 = preprocessing_vmem_getDataAddress(sdTmp1);		 //Tmp1
-	int32_t* tmp2 = preprocessing_vmem_getDataAddress(sdTmp2);		 //Tmp2
-	int32_t* tmp3 = preprocessing_vmem_getDataAddress(sdTmp3);		 //Tmp3
-	int32_t* dst1 = preprocessing_vmem_getDataAddress(sdDst1);		 //Const
-	int32_t* dst2 = preprocessing_vmem_getDataAddress(sdDst2);		 //PixCount
-
-	// Check whether given rows and columns are in a valid range.
-	if ((!preprocessing_vmem_isProcessingSizeValid(sdSrc1, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc2, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc3, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc4, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc5, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc6, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc7, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp1, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp2, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp3, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdDst1, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdDst2, rows, cols)))
-	{
-		return PREPROCESSING_INVALID_SIZE;
-	}
-
-	//Calculate log of each image
-	if((status = preprocessing_log10Image(src1, rows, cols, src4) ) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_log10Image(src2, rows, cols, src5) ) != PREPROCESSING_SUCCESSFUL) return status;
-
-	//Calculate mask of each image
-	if((status = preprocessing_getMask(src3, rows, cols, indexImage1, src6) ) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_getMask(src3, rows, cols, indexImage2, src7) ) != PREPROCESSING_SUCCESSFUL) return status;
-
-	//Calcultate const
-	if((status = preprocessing_arith_doGetConst(src4, src5, src6, src7, tmp1, tmp2, tmp3, rows, cols, dx, dy, dst1, dst2) ) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_addROI(sdDst2, sdTmp3, rows, cols, -dx, -dy, sdDst2)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_addROI(sdDst2, sdTmp3, rows, cols,  dx,  dy, sdDst2)) != PREPROCESSING_SUCCESSFUL) return status;
 
 	return status;
  }
@@ -748,15 +715,6 @@ int preprocessing_arith_doIterationTwoImages(uint32_t sdSrc1, uint32_t sdSrc2, u
 		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
-	unsigned int size = (unsigned int)(rows) * cols;
-
-	const int32_t* src1 = preprocessing_vmem_getDataAddress(sdSrc1); //Gain
-	const int32_t* src2 = preprocessing_vmem_getDataAddress(sdSrc2); //Mask of image iq
-	const int32_t* src3 = preprocessing_vmem_getDataAddress(sdSrc3); //Mask of image ir
-	int32_t* tmp1 = preprocessing_vmem_getDataAddress(sdTmp1);		 //Tmp1
-	int32_t* tmp2 = preprocessing_vmem_getDataAddress(sdTmp2);		 //Tmp2
-	int32_t* tmp3 = preprocessing_vmem_getDataAddress(sdTmp3);		 //Tmp3
-	int32_t* dst  = preprocessing_vmem_getDataAddress(sdDst);		 //GainTmp
 
 	// Check whether given rows and columns are in a valid range.
 	if ((!preprocessing_vmem_isProcessingSizeValid(sdSrc1, rows, cols))
@@ -771,40 +729,32 @@ int preprocessing_arith_doIterationTwoImages(uint32_t sdSrc1, uint32_t sdSrc2, u
 	}
 
 	//Calculate ROI masks
-	if((status = preprocessing_arith_ROI(src2 , rows, cols, -dx, -dy, tmp1)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_ROI(src3 , rows, cols,  dx,  dy, tmp2)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_ROI(sdSrc2 , rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_ROI(sdSrc3 , rows, cols,  dx,  dy, sdTmp2)) != PREPROCESSING_SUCCESSFUL) return status;
 
 	//Calculate mskDouble
-	if((status = preprocessing_arith_multiplyImages(tmp1, tmp2, rows, cols, tmp3)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp3)) != PREPROCESSING_SUCCESSFUL) return status;
 
 	//Calculate ROI from gain
-	if((status = preprocessing_arith_ROI(src1, rows, cols, -dx, -dy, tmp1)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_ROI(src1, rows, cols,  dx,  dy, tmp2)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_ROI(sdSrc1, rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_ROI(sdSrc1, rows, cols,  dx,  dy, sdTmp2)) != PREPROCESSING_SUCCESSFUL) return status;
 
 	//Modify GainTmp
-	if((status = preprocessing_arith_multiplyImages(tmp1, tmp3, rows, cols, tmp1)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_addROI(dst, tmp1, rows, cols, -dx, -dy, dst)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp3, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_addROI(sdDst, sdTmp1, rows, cols, -dx, -dy, sdDst)) != PREPROCESSING_SUCCESSFUL) return status;
 
-	if((status = preprocessing_arith_multiplyImages(tmp2, tmp3, rows, cols, tmp2)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_addROI(dst, tmp2, rows, cols,  dx,  dy, dst)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_multiplyImages(sdTmp2, sdTmp3, rows, cols, sdTmp2)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_addROI(sdDst, sdTmp2, rows, cols,  dx,  dy, sdDst)) != PREPROCESSING_SUCCESSFUL) return status;
 
 	return status;
 }
 
 
-/*
-void doIteration(const ImageValDouble& con,\
-			ImageValDouble& gain,\
-			const ImageValShort& tmp,\
-			const ImageValDouble& pixCnt,\
-			vector<vector<int>> disp,int dimX, int dimY)
-*/
 int preprocessing_arith_doIteration(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3, uint32_t sdSrc4,
 		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3, uint32_t sdTmp4, uint32_t sdTmp5, uint32_t sdTmp6,
 		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
-	unsigned int size = (unsigned int)(rows) * cols;
 
 	//TODO Change dispRows and dispCols value
 	int dispRows = 9;
@@ -815,17 +765,7 @@ int preprocessing_arith_doIteration(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t s
 	unsigned int piq = 0;
 	unsigned int pir = 0;
 
-	const int32_t* src1 = preprocessing_vmem_getDataAddress(sdSrc1); //Con
-	const int32_t* src2 = preprocessing_vmem_getDataAddress(sdSrc2); //Mask of all images
-	const int32_t* src3 = preprocessing_vmem_getDataAddress(sdSrc3); //PixCnt
 	const int32_t* src4 = preprocessing_vmem_getDataAddress(sdSrc4); //Disp
-	int32_t* tmp1 = preprocessing_vmem_getDataAddress(sdTmp1);		 //Tmp1
-	int32_t* tmp2 = preprocessing_vmem_getDataAddress(sdTmp2);		 //Tmp2
-	int32_t* tmp3 = preprocessing_vmem_getDataAddress(sdTmp3);		 //Tmp3
-	int32_t* tmp4 = preprocessing_vmem_getDataAddress(sdTmp4);		 //Tmp4
-	int32_t* tmp5 = preprocessing_vmem_getDataAddress(sdTmp5);		 //Tmp5
-	int32_t* tmp6 = preprocessing_vmem_getDataAddress(sdTmp6);		 //Tmp6
-	int32_t* dst  = preprocessing_vmem_getDataAddress(sdDst);		 //Gain
 
 	// Check whether given rows and columns are in a valid range.
 	if ((!preprocessing_vmem_isProcessingSizeValid(sdSrc1, rows, cols))
@@ -844,17 +784,17 @@ int preprocessing_arith_doIteration(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t s
 	}
 
 	//Creates a copy of Con
-	preprocessing_arith_equalImages(src1, rows, cols, tmp1);
+	preprocessing_arith_equalImages(sdSrc1, rows, cols, sdTmp1);
 
 	for(unsigned short iq = 1; iq < no_of_image; iq++) {
 
 		//Obtain iq mask
-		preprocessing_getMask(src2, rows, cols, iq, tmp2);
+		preprocessing_getMask(sdSrc2, rows, cols, iq, sdTmp2);
 
 		for(unsigned short ir = 0; ir < iq; ir++) {
 
 			//Obtain ir mask
-			preprocessing_getMask(src2, rows, cols, ir, tmp3);
+			preprocessing_getMask(sdSrc2, rows, cols, ir, sdTmp3);
 
 			//Calculate relative offset
 			piq = iq*dispCols;
@@ -869,12 +809,12 @@ int preprocessing_arith_doIteration(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t s
 			int16_t dx = src4[piq] - src4[pir];
 			int16_t dy = src4[piq + 1] - src4[pir + 1];
 
-			if((status = preprocessing_arith_doIterationTwoImages(dst, tmp2, tmp3, tmp4, tmp5, tmp6, rows, cols, dx, dy, tmp1)) != PREPROCESSING_SUCCESSFUL) return status;
+			if((status = preprocessing_arith_doIterationTwoImages(sdDst, sdTmp2, sdTmp3, sdTmp4, sdTmp5, sdTmp6, rows, cols, dx, dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
 
 		}
 	}
 
-	preprocessing_arith_equalImages(src3, rows, cols, tmp4);
+	preprocessing_arith_equalImages(sdSrc3, rows, cols, sdTmp4);
 
 
 
