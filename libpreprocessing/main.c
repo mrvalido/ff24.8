@@ -69,36 +69,14 @@ int main()
 	int32_t *tmp4;
 	int32_t *tmp5;
 	int32_t *tmp6;
-	int32_t *tmp7;
-	int32_t *tmp8;
 
-
-
-	int32_t *min, *max;
-	int32_t M=0;
-	int32_t m=0;
-	int32_t Scale;
-	int32_t threshold=0;
-	int32_t newThresh=0;
-	double dif_threshold;
-	Scale=eve_fp_int2s32(255, FP32_FWL );
-	max=&M;
-	min=&m;
-	int *inputimg;
-	int number_image=1;
-	int numberOfImages = 9;
-	uint16_t indice;
 	uint32_t stdimagesize=ROWS*COLS;
-	uint32_t histsize=256;
 	uint32_t stdDispSize = DISP_ROWS*DISP_COLS;
 	uint32_t stdMeanSize = 1;
 	uint32_t numberOfMemoryInput = 16;
 
 	int status = PREPROCESSING_SUCCESSFUL;
 
-	FILE *fp;
-	int nkeys;
-	char **header;
 	printf ("Start!\n");
 
 	/*
@@ -106,25 +84,9 @@ int main()
 	 * Corresponds to part of copying images to SDRAM, total size of virtual RAM
 	 */
 	SDRAM = (int32_t*) malloc(numberOfMemoryInput*stdimagesize*sizeof(int32_t));
-	inputimg = (int*) malloc((uint32_t)stdimagesize*sizeof(int));			//Only one image
 
 	printf("Load images in Virtual RAM!\n");
 
-	/*
-	for(unsigned int i = 0; i < number_image; i++) {
-		//imageName[8] = 48 + i;//for "./im/im0X.fits" , "./hr/im0X.fits"; set
-		FITS_getImage("rectangle100.fits", inputimg, stdimagesize, &nkeys, &header);
-		for (int j = 0; j < stdimagesize; j++)
-			//SDRAM[j]=(int32_t)eve_fp_int2s32(inputimg[j], FP32_FWL );
-			SDRAM[j]=inputimg[j];
-
-		FITS_getImage("rectangle200.fits", inputimg, stdimagesize, &nkeys, &header);
-		for (int j = stdimagesize; j < stdimagesize*2; j++)
-			//SDRAM[j]=(int32_t)eve_fp_int2s32(inputimg[j], FP32_FWL );
-			SDRAM[j]=inputimg[j-stdimagesize];
-	}
-
-	 */
 	/*
 	 * * * * * * * * *
 	 * memory mapping*
@@ -140,7 +102,7 @@ int main()
 	uint32_t 	img02Size = stdimagesize;
 	uint32_t 	img02DatasetId = 2;
 
-	uint32_t    dispSdram = img02Sdram + img02Size;
+	uint32_t  dispSdram = img02Sdram + img02Size;
 	uint32_t	dispSize  = stdDispSize;
 	uint32_t	dispDatasetId = 3;
 
@@ -184,14 +146,6 @@ int main()
 	uint32_t	tmp6Size = stdimagesize;
 	uint32_t	tmp6DatasetId = 13;
 
-	uint32_t	tmp7Sdram = tmp6Sdram + tmp6Size;
-	uint32_t	tmp7Size = stdimagesize;
-	uint32_t	tmp7DatasetId = 14;
-
-	uint32_t	tmp8Sdram = tmp7Sdram + tmp7Size;
-	uint32_t	tmp8Size = stdimagesize;
-	uint32_t	tmp8DatasetId = 15;
-
 	img01=(SDRAM+img01Sdram);
 	img02=(SDRAM+img02Sdram);
 	disp=(SDRAM+dispSdram);
@@ -205,8 +159,6 @@ int main()
 	tmp4=(SDRAM+tmp4Sdram);
 	tmp5=(SDRAM+tmp5Sdram);
 	tmp6=(SDRAM+tmp6Sdram);
-	tmp7=(SDRAM+tmp7Sdram);
-	tmp8=(SDRAM+tmp8Sdram);
 
 	preprocessing_vmem_setEntry(img01Sdram, img01Size, img01DatasetId, img01);
 	preprocessing_vmem_setEntry(img02Sdram, img02Size, img02DatasetId, img02);
@@ -223,9 +175,6 @@ int main()
 	preprocessing_vmem_setEntry(tmp4Sdram, tmp4Size, tmp4DatasetId, tmp4);
 	preprocessing_vmem_setEntry(tmp5Sdram, tmp5Size, tmp5DatasetId, tmp5);
 	preprocessing_vmem_setEntry(tmp6Sdram, tmp6Size, tmp6DatasetId, tmp6);
-	preprocessing_vmem_setEntry(tmp7Sdram, tmp7Size, tmp7DatasetId, tmp7);
-	preprocessing_vmem_setEntry(tmp8Sdram, tmp8Size, tmp8DatasetId, tmp8);
-
 
 	preprocessing_vmem_print();
 
@@ -242,7 +191,6 @@ int main()
 	printf("Read Disp from NAND to VRAM\n");
 	readNAND(entriesOfNAND[DISP_INDEX], DISP_ROWS, DISP_COLS, dispSdram);
 
-
 	//Create Mask of all images
 	printf("Creating mask of all images\n");
 	readNAND(entriesOfNAND[MASK_INDEX], ROWS, COLS, masksSdram);
@@ -256,7 +204,9 @@ int main()
 
 
 	//CONST
+	printf("\n------------------------------------------------\n");
 	printf("---------------Calculating Const---------------\n");
+	printf("------------------------------------------------\n");
 	unsigned int sizeDisp = DISP_ROWS * DISP_COLS;
 	unsigned int piq = 0;
 	unsigned int pir = 0;
@@ -292,14 +242,16 @@ int main()
 
 				if((status = preprocessing_arith_doGetConst(img01Sdram, img02Sdram, tmp1Sdram, tmp2Sdram, tmp3Sdram, tmp4Sdram, tmp5Sdram, ROWS, COLS, dx, dy, consSdram, pixConSdram) ) != PREPROCESSING_SUCCESSFUL) return status;
 
-				preprocessing_zero(tmp1Sdram, ROWS, COLS, tmp1Sdram);
-				preprocessing_zero(tmp2Sdram, ROWS, COLS, tmp2Sdram);
-				preprocessing_zero(tmp3Sdram, ROWS, COLS, tmp3Sdram);
-				preprocessing_zero(tmp4Sdram, ROWS, COLS, tmp4Sdram);
-				preprocessing_zero(tmp5Sdram, ROWS, COLS, tmp5Sdram);
+				preprocessing_zero(ROWS, COLS, tmp1Sdram);
+				preprocessing_zero(ROWS, COLS, tmp2Sdram);
+				preprocessing_zero(ROWS, COLS, tmp3Sdram);
+				preprocessing_zero(ROWS, COLS, tmp4Sdram);
+				preprocessing_zero(ROWS, COLS, tmp5Sdram);
 			}
 	}
+	printf("\n------------------------------------------------\n");
 	printf("---------Const calculates successfully---------\n");
+	printf("------------------------------------------------\n");
 	//END CONST
 
 	preprocessing_arith_equalImages(consSdram, ROWS, COLS, tmp1Sdram);
@@ -307,17 +259,21 @@ int main()
 
 
 	//ITERA
-	preprocessing_zero(tmp2Sdram, ROWS, COLS, tmp2Sdram);
-	preprocessing_zero(tmp3Sdram, ROWS, COLS, tmp3Sdram);
-	preprocessing_zero(tmp4Sdram, ROWS, COLS, tmp4Sdram);
-	preprocessing_zero(tmp5Sdram, ROWS, COLS, tmp5Sdram);
-	preprocessing_zero(tmp6Sdram, ROWS, COLS, tmp6Sdram);
+	preprocessing_zero(ROWS, COLS, tmp2Sdram);
+	preprocessing_zero(ROWS, COLS, tmp3Sdram);
+	preprocessing_zero(ROWS, COLS, tmp4Sdram);
+	preprocessing_zero(ROWS, COLS, tmp5Sdram);
+	preprocessing_zero(ROWS, COLS, tmp6Sdram);
 
-	printf("Calculate Itera\n");
+	printf("\n------------------------------------------------\n");
+	printf("-----------------Calculate Itera-----------------\n");
+	printf("------------------------------------------------\n");
 	preprocessing_arith_iterate(consSdram, masksSdram, pixConSdram, dispSdram,
 			tmp2Sdram, tmp3Sdram, tmp4Sdram, tmp5Sdram, tmp6Sdram,
 			ROWS, COLS, LOOPS_ITERA, tmp1Sdram);
-	printf("Itera calculated successfully\n");
+	printf("\n------------------------------------------------\n");
+	printf("----------Itera calculated successfully----------\n");
+	printf("------------------------------------------------\n");
 
 	//END ITERA
 
