@@ -86,7 +86,6 @@ void createNANDFLASH(int32_t *NANDFLASH, int32_t **entriesOfNAND, int stdimagesi
 	entriesOfNAND[9] =(NANDFLASH+maskNand);
 	entriesOfNAND[10]=(NANDFLASH+dispNand);
 
-
 	//READ DISP
 	int MAXCHAR = 1000;
 	FILE *fp2;
@@ -222,12 +221,14 @@ int preprocessing_zero(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint32_t sd
     return status;
 }
 
-int preprocessing_arith_maskImages(uint32_t sdSrc1,
+int preprocessing_arith_maskImagesLog10(uint32_t sdSrc1,
             uint16_t rows, uint16_t cols, uint16_t index, uint32_t iMin, uint32_t iMax, uint32_t sdDst){
     int status = PREPROCESSING_SUCCESSFUL;
     unsigned int size = (unsigned int)(rows) * cols;
     unsigned int p = 0;
     unsigned int mskTmp = 0;
+
+    uint32_t zero = 0;
 
     int32_t* src1 = preprocessing_vmem_getDataAddress(sdSrc1);
     int32_t* dst = preprocessing_vmem_getDataAddress(sdDst);
@@ -251,6 +252,12 @@ int preprocessing_arith_maskImages(uint32_t sdSrc1,
 
 			if( (eve_fp_compare32(src1 + p, &iMin) == 1 ) && ((eve_fp_compare32(src1 + p, &iMax) == -1 ) || (eve_fp_compare32(src1 + p, &iMax) == 0 )) ){
 				mskTmp = 1;
+
+				if((eve_fp_compare32(src1 + p, &zero) == 1 ) ){
+					src1[p] = eve_fp_double2s32(
+												log10(eve_fp_signed32ToDouble(src1[p], FP32_FWL)),
+												FP32_FWL);
+				}
 			}
 			else{
 				mskTmp = 0;
@@ -437,6 +444,8 @@ int preprocessing_arith_normalicer(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t ro
 	unsigned int size = (unsigned int)(rows) * cols;
 	unsigned int p = 0;
 
+	uint32_t one = FP32_BINARY_TRUE;
+
 	const int32_t* src1 = preprocessing_vmem_getDataAddress(sdSrc1);
 	const int32_t* src2 = preprocessing_vmem_getDataAddress(sdSrc2);
 	int32_t* dst = preprocessing_vmem_getDataAddress(sdDst);
@@ -458,10 +467,9 @@ int preprocessing_arith_normalicer(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t ro
 
 			// Check for valid pointer position.
 			PREPROCESSING_DEF_CHECK_POINTER(src1, p, size);
-			PREPROCESSING_DEF_CHECK_POINTER(src2, p, size);
 			PREPROCESSING_DEF_CHECK_POINTER(dst, p, size);
 
-			if(src2[p] > 1){
+			if(eve_fp_compare32(src2 + p, &one) == 1){
 				dst[p] = eve_fp_divide32(src1[p], src2[p], FP32_FWL);
 			}
 
@@ -484,6 +492,7 @@ int preprocessing_arith_mean(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, ui
 	int npix = 0;
 	uint32_t sum2 = 0;
 	uint32_t sum3 = 0;
+	uint32_t zero = 0;
 
 	const int32_t* src1 = preprocessing_vmem_getDataAddress(sdSrc1);	//GTmp
 	const int32_t* src2 = preprocessing_vmem_getDataAddress(sdSrc2);	//PixCnt
@@ -508,22 +517,28 @@ int preprocessing_arith_mean(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, ui
 			PREPROCESSING_DEF_CHECK_POINTER(src1, p, size);
 			PREPROCESSING_DEF_CHECK_POINTER(src2, p, size);
 
-			if (src2[p]>0){
+			if (eve_fp_compare32(src2 + p, &zero) == 1){
 				sum2 = eve_fp_add32(sum2, src1[p]);
-				sum3 = eve_fp_add32(sum2, eve_fp_multiply32(src1[p], src1[p], FP32_FWL));
+				sum3 = eve_fp_add32(sum3, eve_fp_multiply32(src1[p], src1[p], FP32_FWL));
 				npix++;
 			}
 		}
 	}
 
-	dst[0] = eve_fp_divide32(sum2, eve_fp_int2s32(npix, FP32_FWL), FP32_FWL);			//return mean
+	// Check for valid pointer position.
+	PREPROCESSING_DEF_CHECK_POINTER(dst, 0, size);
+	PREPROCESSING_DEF_CHECK_POINTER(dst, 1, size);
+	PREPROCESSING_DEF_CHECK_POINTER(dst, 2, size);
+	PREPROCESSING_DEF_CHECK_POINTER(dst, 3, size);
+
+	uint32_t npixFixed = eve_fp_int2s32(npix, FP32_FWL);
+	dst[0] = eve_fp_divide32(sum2, npixFixed, FP32_FWL);			//return mean
 
 	//Original ->  5*sqrt(sum3/npix-dst[0]*dst[0]);
 	uint32_t fiveFixed = eve_fp_int2s32(5, FP32_FWL);
-	uint32_t npixFixed = eve_fp_int2s32(npix, FP32_FWL);
 	uint32_t sum3DividedByNpix = eve_fp_divide32(sum3, npixFixed, FP32_FWL);
 	uint32_t pow2mean = eve_fp_multiply32(dst[0], dst[0], FP32_FWL);
-	uint32_t divisionMinusPow = eve_fp_subtract32( sum3DividedByNpix,pow2mean );
+	uint32_t divisionMinusPow = eve_fp_subtract32(sum3DividedByNpix, pow2mean );
 	uint32_t sqrtOfDivisionMinusPow = eve_fp_double2s32( sqrt(eve_fp_signed32ToDouble( divisionMinusPow , FP32_FWL)), FP32_FWL);
 	dst[1] = eve_fp_multiply32( fiveFixed, sqrtOfDivisionMinusPow, FP32_FWL);
 
@@ -533,12 +548,102 @@ int preprocessing_arith_mean(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, ui
 	return status;
 }
 
-int preprocessing_arith_criba_fivesigma(){
+int preprocessing_arith_criba_fivesigma(uint32_t sdSrc, uint32_t mean, uint32_t fiveSigma,
+		uint16_t rows, uint16_t cols, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
+	unsigned int size = (unsigned int)(rows) * cols;
+	unsigned int p = 0;
+
+	int npix = 0;
+	uint32_t sum = 0;
+	uint32_t tmp1 = 0;
+	double tmp2 = 0;
+
+	const int32_t* src = preprocessing_vmem_getDataAddress(sdSrc);	//GainTmp
+	int32_t* dst = preprocessing_vmem_getDataAddress(sdDst);		//Matrix Stats
+
+	// Check whether given rows and columns are in a valid range.
+	if ((!preprocessing_vmem_isProcessingSizeValid(sdSrc, rows, cols))
+			|| (!preprocessing_vmem_isProcessingSizeValid(sdDst, rows, cols)))
+	{
+		return PREPROCESSING_INVALID_SIZE;
+	}
+
+	// Process.
+	for (unsigned int r = 0; r < rows; r++)
+	{
+		for (unsigned int c = 0; c < cols; c++)
+		{
+			p = r * cols + c;
+
+			// Check for valid pointer position.
+			PREPROCESSING_DEF_CHECK_POINTER(src, p, size);
+
+			tmp1 = eve_fp_subtract32(src[p], mean);
+			tmp2 = eve_fp_signed32ToDouble(tmp1 , FP32_FWL);
+			tmp2 = fabs(tmp2);
+			tmp1 = eve_fp_double2s32(tmp2, FP32_FWL);
+
+			if(eve_fp_compare32(&tmp1, &fiveSigma) == 1){
+				sum = eve_fp_add32(sum, src[p]);
+				npix++;
+			}
+		}
+	}
+
+	// Check for valid pointer position.
+	PREPROCESSING_DEF_CHECK_POINTER(dst, 0, size);
+	PREPROCESSING_DEF_CHECK_POINTER(dst, 1, size);
+
+	dst[0] = sum;
+	dst[1] =  eve_fp_int2s32(npix, FP32_FWL);
 
 	return status;
 }
+
+
+int preprocessing_arith_flatfield(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t cols, uint32_t sdDst){
+
+	int status = PREPROCESSING_SUCCESSFUL;
+	unsigned int size = (unsigned int)(rows) * cols;
+	unsigned int p = 0;
+
+	uint32_t zero = 0;
+
+	const int32_t* src1 = preprocessing_vmem_getDataAddress(sdSrc1);	//GainTmp
+	const int32_t* src2 = preprocessing_vmem_getDataAddress(sdSrc2);	//Mask of all images
+	int32_t* dst = preprocessing_vmem_getDataAddress(sdDst);			//Flatfield
+
+	// Check whether given rows and columns are in a valid range.
+	if ((!preprocessing_vmem_isProcessingSizeValid(sdSrc1, rows, cols))
+			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc2, rows, cols))
+			|| (!preprocessing_vmem_isProcessingSizeValid(sdDst, rows, cols)))
+	{
+		return PREPROCESSING_INVALID_SIZE;
+	}
+
+	// Process.
+	for (unsigned int r = 0; r < rows; r++)
+	{
+		for (unsigned int c = 0; c < cols; c++)
+		{
+			p = r * cols + c;
+
+			// Check for valid pointer position.
+			PREPROCESSING_DEF_CHECK_POINTER(src1, p, size);
+			PREPROCESSING_DEF_CHECK_POINTER(src2, p, size);
+			PREPROCESSING_DEF_CHECK_POINTER(dst, p, size);
+
+			if (eve_fp_compare32(src2 + p, &zero) != 0){
+				dst[p] = eve_fp_double2s32( pow(10.0, eve_fp_signed32ToDouble( src1[p] , FP32_FWL)), FP32_FWL);
+			}
+		}
+	}
+
+	return status;
+}
+
 
 int16_t max(int16_t a, int16_t b){
 	if(a >= b) return a;
@@ -635,10 +740,6 @@ int preprocessing_arith_doGetConst(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sd
 		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, uint32_t sdDst1, uint32_t sdDst2){
 
 	int status = PREPROCESSING_SUCCESSFUL;
-	int stdimagesize = rows*cols;
-
-	const int32_t* tmp1 = preprocessing_vmem_getDataAddress(sdTmp1);
-	const int32_t* tmp2 = preprocessing_vmem_getDataAddress(sdTmp2);
 
 	// Check whether given rows and columns are in a valid range.
 	if ((!preprocessing_vmem_isProcessingSizeValid(sdSrc1, rows, cols))
@@ -652,51 +753,57 @@ int preprocessing_arith_doGetConst(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sd
 	}
 
 	//Calculate ROIs of masks
-	if((status = preprocessing_arith_ROI(sdSrc3 , rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_ROI(sdSrc4 , rows, cols,  dx,  dy, sdTmp2)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_ROI(sdSrc3 , rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	if((status = preprocessing_arith_ROI(sdSrc4 , rows, cols,  dx,  dy, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
 
 	//Multiply ROIs to obtain mksDouble
-	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp3)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp3)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
 
-	if((status = preprocessing_zero(sdTmp1, ROWS, COLS, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_zero(sdTmp2, ROWS, COLS, sdTmp2)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_zero(sdTmp1, ROWS, COLS, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	if((status = preprocessing_zero(sdTmp2, ROWS, COLS, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
 
 	//Calculate ROI of images
-	if((status = preprocessing_arith_ROI(sdSrc1 , rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_ROI(sdSrc2 , rows, cols,  dx,  dy, sdTmp2)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_ROI(sdSrc1 , rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	if((status = preprocessing_arith_ROI(sdSrc2 , rows, cols,  dx,  dy, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
 
 	//Calculate Diff
-	if((status = preprocessing_arith_subtractImages(sdTmp1, sdTmp2, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp3, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_subtractImages(sdTmp1, sdTmp2, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp3, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
 
 	//Apply diff to const
-	if((status = preprocessing_arith_addROI(sdDst1, sdTmp1, rows, cols, -dx, -dy, sdDst1)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_substractROI(sdDst1, sdTmp1, rows, cols, dx, dy, sdDst1)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_addROI(sdDst1, sdTmp1, rows, cols, -dx, -dy, sdDst1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	if((status = preprocessing_arith_substractROI(sdDst1, sdTmp1, rows, cols, dx, dy, sdDst1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
 
 	//Apply mskDouble to pixCount
-	if((status = preprocessing_arith_addROI(sdDst2, sdTmp3, rows, cols, -dx, -dy, sdDst2)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_addROI(sdDst2, sdTmp3, rows, cols,  dx,  dy, sdDst2)) != PREPROCESSING_SUCCESSFUL) return status;
+	if((status = preprocessing_arith_addROI(sdDst2, sdTmp3, rows, cols, -dx, -dy, sdDst2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	if((status = preprocessing_arith_addROI(sdDst2, sdTmp3, rows, cols,  dx,  dy, sdDst2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
 
 	return status;
  }
 
-//TODO Add disp (Dx, Dy)
-int preprocessing_arith_iterate(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3,
+
+int preprocessing_arith_iterate(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3, uint32_t sdSrc4,
+		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3, uint32_t sdTmp4, uint32_t sdTmp5,
 		uint16_t rows, uint16_t cols, uint16_t loops, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
-	unsigned int size = (unsigned int)(rows) * cols;
-	unsigned int p = 0;
 
 	const int32_t* src1 = preprocessing_vmem_getDataAddress(sdSrc1); //Con
 	const int32_t* src2 = preprocessing_vmem_getDataAddress(sdSrc2); //Mask of all images
 	const int32_t* src3 = preprocessing_vmem_getDataAddress(sdSrc3); //PixCount
+	const int32_t* src4 = preprocessing_vmem_getDataAddress(sdSrc4); //Disp
 	int32_t* dst2 = preprocessing_vmem_getDataAddress(sdDst);		 //Gain
 
 	// Check whether given rows and columns are in a valid range.
 	if ((!preprocessing_vmem_isProcessingSizeValid(sdSrc1, rows, cols))
 			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc2, rows, cols))
 			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc3, rows, cols))
+			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc4, DISP_ROWS, DISP_COLS))
+			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp1, rows, cols))
+			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp2, rows, cols))
+			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp3, rows, cols))
+			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp4, rows, cols))
+			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp5, rows, cols))
 			|| (!preprocessing_vmem_isProcessingSizeValid(sdDst,  rows, cols)))
 	{
 		return PREPROCESSING_INVALID_SIZE;
@@ -704,101 +811,81 @@ int preprocessing_arith_iterate(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc
 
 	for(uint16_t i = 0; i < loops; i++) {
 
-		//doIteration(con, gain, tmp, pixCnt,disp,dimX, dimY);
+		printf("\tItera %d\n", i);
+
+		preprocessing_zero(sdTmp1, ROWS, COLS, sdTmp1);
+		preprocessing_zero(sdTmp2, ROWS, COLS, sdTmp2);
+		preprocessing_zero(sdTmp3, ROWS, COLS, sdTmp3);
+		preprocessing_zero(sdTmp4, ROWS, COLS, sdTmp4);
+		preprocessing_zero(sdTmp5, ROWS, COLS, sdTmp5);
+
+		preprocessing_arith_doIteration(sdSrc1, sdSrc2, sdSrc3, sdSrc4,
+										sdTmp1, sdTmp2, sdTmp3, sdTmp4, sdTmp5,
+										rows, cols, sdDst);
 	}
 
-	return status;
-}
-
-int preprocessing_arith_doIterationTwoImages(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3,
-		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3,
-		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, uint32_t sdDst){
-
-	int status = PREPROCESSING_SUCCESSFUL;
-
-	// Check whether given rows and columns are in a valid range.
-	if ((!preprocessing_vmem_isProcessingSizeValid(sdSrc1, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc2, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc3, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp1, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp2, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp3, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdDst, rows, cols)))
-	{
-		return PREPROCESSING_INVALID_SIZE;
-	}
-
-	//Calculate ROI masks
-	if((status = preprocessing_arith_ROI(sdSrc2 , rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_ROI(sdSrc3 , rows, cols,  dx,  dy, sdTmp2)) != PREPROCESSING_SUCCESSFUL) return status;
-
-	//Calculate mskDouble
-	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp3)) != PREPROCESSING_SUCCESSFUL) return status;
-
-	//Calculate ROI from gain
-	if((status = preprocessing_arith_ROI(sdSrc1, rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_ROI(sdSrc1, rows, cols,  dx,  dy, sdTmp2)) != PREPROCESSING_SUCCESSFUL) return status;
-
-	//Modify GainTmp
-	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp3, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_addROI(sdDst, sdTmp1, rows, cols, -dx, -dy, sdDst)) != PREPROCESSING_SUCCESSFUL) return status;
-
-	if((status = preprocessing_arith_multiplyImages(sdTmp2, sdTmp3, rows, cols, sdTmp2)) != PREPROCESSING_SUCCESSFUL) return status;
-	if((status = preprocessing_arith_addROI(sdDst, sdTmp2, rows, cols,  dx,  dy, sdDst)) != PREPROCESSING_SUCCESSFUL) return status;
+	preprocessing_arith_flatfield(sdDst, sdSrc2, rows, cols, sdDst);
 
 	return status;
 }
 
 
 int preprocessing_arith_doIteration(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3, uint32_t sdSrc4,
-		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3, uint32_t sdTmp4, uint32_t sdTmp5, uint32_t sdTmp6,
-		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, uint32_t sdDst){
+		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3, uint32_t sdTmp4, uint32_t sdTmp5,
+		uint16_t rows, uint16_t cols, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
 
-	//TODO Change dispRows and dispCols value
-	int dispRows = 9;
-	int dispCols = 2;
-	int no_of_image = 9;
-
-	unsigned int sizeDisp = (unsigned int)(dispRows) * dispCols;
+	unsigned int size = (unsigned int)(rows) * cols;
+	unsigned int sizeDisp = DISP_ROWS * DISP_COLS;
 	unsigned int piq = 0;
 	unsigned int pir = 0;
 
+	const int32_t* src1 = preprocessing_vmem_getDataAddress(sdSrc1); //Con
+	const int32_t* src2 = preprocessing_vmem_getDataAddress(sdSrc2); //Mask of all images
+	const int32_t* src3 = preprocessing_vmem_getDataAddress(sdSrc3); //PixCnt
 	const int32_t* src4 = preprocessing_vmem_getDataAddress(sdSrc4); //Disp
+	const int32_t* dst = preprocessing_vmem_getDataAddress(sdDst); 	 //Gain
+
+	const int32_t* tmp1 = preprocessing_vmem_getDataAddress(sdTmp1);
+	const int32_t* tmp4 = preprocessing_vmem_getDataAddress(sdTmp4);
+	const int32_t* tmp5 = preprocessing_vmem_getDataAddress(sdTmp5);
 
 	// Check whether given rows and columns are in a valid range.
 	if ((!preprocessing_vmem_isProcessingSizeValid(sdSrc1, rows, cols))
 			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc2, rows, cols))
 			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc3, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc4, dispRows, dispCols))
+			|| (!preprocessing_vmem_isProcessingSizeValid(sdSrc4, DISP_ROWS, DISP_COLS))
 			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp1, rows, cols))
 			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp2, rows, cols))
 			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp3, rows, cols))
 			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp4, rows, cols))
 			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp5, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp6, rows, cols))
 			|| (!preprocessing_vmem_isProcessingSizeValid(sdDst, rows, cols)))
 	{
 		return PREPROCESSING_INVALID_SIZE;
 	}
 
-	//Creates a copy of Con
+	//Creates a copy of Con (GainTmp)
 	preprocessing_arith_equalImages(sdSrc1, rows, cols, sdTmp1);
 
-	for(unsigned short iq = 1; iq < no_of_image; iq++) {
+	for(unsigned short iq = 1; iq < NUMBER_OF_IMAGES; iq++) {
 
 		//Obtain iq mask
+		if((status = preprocessing_zero(sdTmp2, ROWS, COLS, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
 		preprocessing_getMask(sdSrc2, rows, cols, iq, sdTmp2);
 
 		for(unsigned short ir = 0; ir < iq; ir++) {
 
 			//Obtain ir mask
+			if((status = preprocessing_zero(sdTmp3, ROWS, COLS, sdTmp3)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
 			preprocessing_getMask(sdSrc2, rows, cols, ir, sdTmp3);
 
-			//Calculate relative offset
-			piq = iq*dispCols;
-			pir = ir*dispCols;
+			printf("\t\tPair: %d - %d   \n", iq, ir);
+
+			//Calculate point
+			piq = iq*DISP_COLS;
+			pir = ir*DISP_COLS;
 
 			// Check for valid pointer position.
 			PREPROCESSING_DEF_CHECK_POINTER(src4, piq, sizeDisp);
@@ -806,17 +893,72 @@ int preprocessing_arith_doIteration(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t s
 			PREPROCESSING_DEF_CHECK_POINTER(src4, pir, sizeDisp);
 			PREPROCESSING_DEF_CHECK_POINTER(src4, pir+1, sizeDisp);
 
-			int16_t dx = src4[piq] - src4[pir];
-			int16_t dy = src4[piq + 1] - src4[pir + 1];
+			int dy = (int)eve_fp_subtract32(src4[piq], src4[pir])/FP32_BINARY_TRUE;
+			int dx = (int)eve_fp_subtract32(src4[piq + 1], src4[pir + 1])/FP32_BINARY_TRUE;
 
-			if((status = preprocessing_arith_doIterationTwoImages(sdDst, sdTmp2, sdTmp3, sdTmp4, sdTmp5, sdTmp6, rows, cols, dx, dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL) return status;
-
+			if((status = preprocessing_arith_doIterationTwoImages(sdDst, sdTmp2, sdTmp3, sdTmp4, sdTmp5, rows, cols, dx, dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
 		}
 	}
 
-	preprocessing_arith_equalImages(sdSrc3, rows, cols, sdTmp4);
+	writeImageToFile(tmp1, "gainTmp.fits", -1, 0, ROWS*COLS );
+
+	//Normalize GainTmp
+	preprocessing_arith_normalicer(sdTmp1, sdSrc3, rows, cols, sdTmp1);
+
+	preprocessing_arith_mean(sdTmp1, sdSrc3, rows, cols, sdTmp4);
+
+	// Check for valid pointer position.
+	PREPROCESSING_DEF_CHECK_POINTER(tmp4, 0, size);
+	PREPROCESSING_DEF_CHECK_POINTER(tmp4, 1, size);
+	PREPROCESSING_DEF_CHECK_POINTER(tmp4, 2, size);
+	PREPROCESSING_DEF_CHECK_POINTER(tmp4, 3, size);
+	uint32_t mean = tmp4[0];
+	uint32_t fiveSigma = tmp4[1];
+
+	preprocessing_arith_criba_fivesigma(sdTmp1, mean, fiveSigma, rows, cols, sdTmp5);
+
+	PREPROCESSING_DEF_CHECK_POINTER(tmp5, 0, size);
+	PREPROCESSING_DEF_CHECK_POINTER(tmp5, 1, size);
+
+	uint32_t sum = eve_fp_subtract32(tmp4[3], tmp5[0]);
+	uint32_t npix = eve_fp_subtract32(tmp4[2], tmp5[1]);
+
+	uint32_t aver = eve_fp_divide32(sum, npix, FP32_FWL);
+
+	//Update Gain
+	preprocessing_arith_subtractScalar(sdTmp1, rows, cols, aver, sdDst);
+
+	return status;
+}
 
 
+int preprocessing_arith_doIterationTwoImages(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3,
+		uint32_t sdTmp1, uint32_t sdTmp2,
+		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, uint32_t sdDst){
+
+	int status = PREPROCESSING_SUCCESSFUL;
+
+	//Cleaning Temps
+	if((status = preprocessing_zero(sdTmp1, ROWS, COLS, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	if((status = preprocessing_zero(sdTmp2, ROWS, COLS, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+
+	//Calculate ROI masks
+	if((status = preprocessing_arith_ROI(sdSrc2 , rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	if((status = preprocessing_arith_ROI(sdSrc3 , rows, cols,  dx,  dy, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+
+	//Calculate mskDouble
+	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+
+	//Modify GainTmp
+	if((status = preprocessing_zero(sdTmp1, ROWS, COLS, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	if((status = preprocessing_arith_ROI(sdSrc1, rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	if((status = preprocessing_arith_addROI(sdDst, sdTmp1, rows, cols, dx, dy, sdDst)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+
+	if((status = preprocessing_zero(sdTmp1, ROWS, COLS, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	if((status = preprocessing_arith_ROI(sdSrc1, rows, cols,  dx,  dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	if((status = preprocessing_arith_addROI(sdDst, sdTmp1, rows, cols,  -dx,  -dy, sdDst)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
 
 	return status;
 }

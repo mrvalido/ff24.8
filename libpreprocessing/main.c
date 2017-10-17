@@ -244,22 +244,22 @@ int main()
 
 
 	//Create Mask of all images
-	//TODO - Poner log10 dentro de mask
 	printf("Creating mask of all images\n");
 	readNAND(entriesOfNAND[MASK_INDEX], ROWS, COLS, masksSdram);
 	for(int i=0; i < NUMBER_OF_IMAGES; i++){
 		readNAND(entriesOfNAND[i], ROWS, COLS, img01Sdram);
-		preprocessing_arith_maskImages(img01Sdram, ROWS, COLS, i, IMIN, IMAX, masksSdram);
-	    preprocessing_log10Image(img01Sdram, ROWS, COLS, img01Sdram);
+		preprocessing_arith_maskImagesLog10(img01Sdram, ROWS, COLS, i, IMIN, IMAX, masksSdram);
 	    writeNAND(img01Sdram, ROWS, COLS, entriesOfNAND[i]);
 	}
 
 	printf("Mask created successfully!\n");
 
 
-
-
-
+	//CONST
+	printf("---------------Calculating Const---------------\n");
+	unsigned int sizeDisp = DISP_ROWS * DISP_COLS;
+	unsigned int piq = 0;
+	unsigned int pir = 0;
 
 	for(unsigned short iq = 1; iq < NUMBER_OF_IMAGES; iq++) {
 		printf("--------------------------\n");
@@ -272,9 +272,19 @@ int main()
 
 				readNAND(entriesOfNAND[ir], ROWS, COLS, img02Sdram);
 
+				//Calculate point
+				piq = iq*DISP_COLS;
+				pir = ir*DISP_COLS;
+
+				// Check for valid pointer position.
+				PREPROCESSING_DEF_CHECK_POINTER(disp, piq, sizeDisp);
+				PREPROCESSING_DEF_CHECK_POINTER(disp, piq+1, sizeDisp);
+				PREPROCESSING_DEF_CHECK_POINTER(disp, pir, sizeDisp);
+				PREPROCESSING_DEF_CHECK_POINTER(disp, pir+1, sizeDisp);
+
 				//Calculate Disp
-				int dy = (disp[iq*DISP_COLS]   - disp[ir*DISP_COLS])/FP32_BINARY_TRUE;
-				int dx = (disp[iq*DISP_COLS+1] - disp[ir*DISP_COLS+1])/FP32_BINARY_TRUE;
+				int dy = (int)eve_fp_subtract32(disp[piq], disp[pir])/FP32_BINARY_TRUE;
+				int dx = (int)eve_fp_subtract32(disp[piq + 1], disp[pir + 1])/FP32_BINARY_TRUE;
 
 				//Calculate mask of each image
 				if((status = preprocessing_getMask(masksSdram, ROWS, COLS, iq, tmp1Sdram) ) != PREPROCESSING_SUCCESSFUL) return status;
@@ -289,33 +299,31 @@ int main()
 				preprocessing_zero(tmp5Sdram, ROWS, COLS, tmp5Sdram);
 			}
 	}
+	printf("---------Const calculates successfully---------\n");
+	//END CONST
 
+	preprocessing_arith_equalImages(consSdram, ROWS, COLS, tmp1Sdram);
+	preprocessing_arith_normalicer(tmp1Sdram, pixConSdram, ROWS, COLS, tmp1Sdram);
+
+
+	//ITERA
+	preprocessing_zero(tmp2Sdram, ROWS, COLS, tmp2Sdram);
+	preprocessing_zero(tmp3Sdram, ROWS, COLS, tmp3Sdram);
+	preprocessing_zero(tmp4Sdram, ROWS, COLS, tmp4Sdram);
+	preprocessing_zero(tmp5Sdram, ROWS, COLS, tmp5Sdram);
+	preprocessing_zero(tmp6Sdram, ROWS, COLS, tmp6Sdram);
+
+	printf("Calculate Itera\n");
+	preprocessing_arith_iterate(consSdram, masksSdram, pixConSdram, dispSdram,
+			tmp2Sdram, tmp3Sdram, tmp4Sdram, tmp5Sdram, tmp6Sdram,
+			ROWS, COLS, LOOPS_ITERA, tmp1Sdram);
+	printf("Itera calculated successfully\n");
+
+	//END ITERA
 
 	writeImageToFile(cons, "const.fits", -1, 0, stdimagesize );
 	writeImageToFile(pixCon, "pixCon.fits", -1, 0, stdimagesize );
-
-
-
-/*
-	printf("Cleaning tmps\n");
-	preprocessing_zero(tmp1Sdram, rows, cols, tmp1Sdram);
-	preprocessing_zero(tmp2Sdram, rows, cols, tmp2Sdram);
-	preprocessing_zero(tmp3Sdram, rows, cols, tmp3Sdram);
-	printf("After Cleaning tmps\n");
-
-	unsigned int dx= 100;
-	unsigned int dy= 100;
-
-	printf("ROI\n");
-	preprocessing_arith_ROI(img01Sdram, rows, cols, dx, dy, tmp1Sdram);
-	preprocessing_arith_ROI(img02Sdram, rows, cols, -dx, -dy, tmp2Sdram);
-
-	printf("Sum ROI\n");
-	preprocessing_arith_addROI(tmp3Sdram, tmp1Sdram, rows, cols, dx, dy, tmp3Sdram);
-	preprocessing_arith_addROI(tmp3Sdram, tmp2Sdram, rows, cols, -dx, -dy, tmp3Sdram);
-
-	printf("After Sum ROI\n");
-*/
+	writeImageToFile(tmp1, "Gain.fits", -1, 0, stdimagesize );
 
 	printf("Done!\n");
 	return 1;

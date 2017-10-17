@@ -26,6 +26,7 @@
 
 #define IMIN 	0 << FP32_FWL
 #define IMAX  	82000 << FP32_FWL
+#define LOOPS_ITERA 10
 
 #define MASK_INDEX  NUMBER_OF_IMAGES
 #define DISP_INDEX 	(MASK_INDEX + 1)

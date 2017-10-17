@@ -24,7 +24,7 @@ int writeNAND(uint32_t sdSrc, uint16_t rows, uint16_t cols, int32_t *nandDst);
 int preprocessing_zero(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint32_t sdDst);
 
 /**
-     * Generates mask of an image pixel by pixel.
+     * Generates mask of an image pixel by pixel, anc calculate log10 of the source image.
      *
      * @param sdSrc1 the VMEM (SDRAM) address of image 1.
      * @param rows   the number of image rows.
@@ -36,7 +36,7 @@ int preprocessing_zero(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint32_t sd
      *
      * @return PREPROCESSING_SUCCESSFUL on success, failure code otherwise.
      */
-int preprocessing_arith_maskImages(uint32_t sdSrc1,
+int preprocessing_arith_maskImagesLog10(uint32_t sdSrc1,
             uint16_t rows, uint16_t cols, uint16_t index, uint32_t iMin, uint32_t iMax, uint32_t sdDst);
 
 /**
@@ -98,7 +98,7 @@ int preprocessing_arith_substractROI(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t 
     */
 int preprocessing_arith_equalImages(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint32_t sdDst);
 
-int preprocessing_arith_normalicer(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t cols, uint32_t sdDst);
+int preprocessing_arith_normalicer(uint32_t sdSrc1, uint32_t sdSrc2,  uint16_t rows, uint16_t cols, uint32_t sdDst);
 
 int16_t max(int16_t a, int16_t b);
 int16_t min(int16_t a, int16_t b);
@@ -154,6 +154,17 @@ int preprocessing_arith_doGetConst(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sd
 		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3,
 		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, uint32_t sdDst1, uint32_t sdDst2);
 
+
+
+int preprocessing_arith_iterate(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3, uint32_t sdSrc4,
+		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3, uint32_t sdTmp4, uint32_t sdTmp5,
+		uint16_t rows, uint16_t cols, uint16_t loops, uint32_t sdDst);
+
+int preprocessing_arith_doIteration(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3, uint32_t sdSrc4,
+		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3, uint32_t sdTmp4, uint32_t sdTmp5,
+		uint16_t rows, uint16_t cols, uint32_t sdDst);
+
+
 /**
      * Calculate gain of two images for doIteration function
      *
@@ -162,7 +173,6 @@ int preprocessing_arith_doGetConst(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sd
      * @param sdSrc3 the VMEM (SDRAM) address of mask 2.
      * @param sdTmp1 the VMEM (SDRAM) address of temporal image.
      * @param sdTmp2 the VMEM (SDRAM) address of temporal image.
-     * @param sdTmp3 the VMEM (SDRAM) address of temporal image.
      * @param rows   the number of image rows.
      * @param cols   the number of image columns.
      * @param dx  	 the offset X.
@@ -172,7 +182,7 @@ int preprocessing_arith_doGetConst(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sd
      * @return PREPROCESSING_SUCCESSFUL on success, failure code otherwise.
      */
 int preprocessing_arith_doIterationTwoImages(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3,
-		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3,
+		uint32_t sdTmp1, uint32_t sdTmp2,
 		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, uint32_t sdDst);
 
 #endif /* LIBPREPROCESSING_PREPROCESSING_HOUGH_H_ */
