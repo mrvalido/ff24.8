@@ -33,4 +33,7 @@
 #define DISP_ROWS   NUMBER_OF_IMAGES
 #define DISP_COLS	2
 
+#define CHECK_STATUS(x) 	if((status = x ) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+
+
 #endif /* LIBPREPROCESSING_PREPROCESSING_MYDEF_H_ */

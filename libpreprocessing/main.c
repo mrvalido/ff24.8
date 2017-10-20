@@ -196,7 +196,7 @@ int main()
 	readNAND(entriesOfNAND[MASK_INDEX], ROWS, COLS, masksSdram);
 	for(int i=0; i < NUMBER_OF_IMAGES; i++){
 		readNAND(entriesOfNAND[i], ROWS, COLS, img01Sdram);
-		if((status = preprocessing_arith_maskImagesLog10(img01Sdram, ROWS, COLS, i, IMIN, IMAX, masksSdram)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+		CHECK_STATUS(preprocessing_arith_maskImagesLog10(img01Sdram, ROWS, COLS, i, IMIN, IMAX, masksSdram))
 	    writeNAND(img01Sdram, ROWS, COLS, entriesOfNAND[i]);
 	}
 
@@ -237,16 +237,16 @@ int main()
 				int dx = (int)eve_fp_subtract32(disp[piq + 1], disp[pir + 1])/FP32_BINARY_TRUE;
 
 				//Calculate mask of each image
-				if((status = preprocessing_getMask(masksSdram, ROWS, COLS, iq, tmp1Sdram) ) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-				if((status = preprocessing_getMask(masksSdram, ROWS, COLS, ir, tmp2Sdram) ) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+				CHECK_STATUS(preprocessing_getMask(masksSdram, ROWS, COLS, iq, tmp1Sdram) )
+				CHECK_STATUS(preprocessing_getMask(masksSdram, ROWS, COLS, ir, tmp2Sdram) )
 
-				if((status = preprocessing_arith_doGetConst(img01Sdram, img02Sdram, tmp1Sdram, tmp2Sdram, tmp3Sdram, tmp4Sdram, tmp5Sdram, ROWS, COLS, dx, dy, consSdram, pixConSdram) ) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+				CHECK_STATUS(preprocessing_arith_doGetConst(img01Sdram, img02Sdram, tmp1Sdram, tmp2Sdram, tmp3Sdram, tmp4Sdram, tmp5Sdram, ROWS, COLS, dx, dy, consSdram, pixConSdram) )
 
-				if((status = preprocessing_zero(ROWS, COLS, tmp1Sdram)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-				if((status = preprocessing_zero(ROWS, COLS, tmp2Sdram)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-				if((status = preprocessing_zero(ROWS, COLS, tmp3Sdram)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-				if((status = preprocessing_zero(ROWS, COLS, tmp4Sdram)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-				if((status = preprocessing_zero(ROWS, COLS, tmp5Sdram)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+				CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp1Sdram))
+				CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp2Sdram))
+				CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp3Sdram))
+				CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp4Sdram))
+				CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp5Sdram))
 			}
 	}
 	printf("\n------------------------------------------------\n");
@@ -254,23 +254,23 @@ int main()
 	printf("------------------------------------------------\n");
 	//END CONST
 
-	if((status = preprocessing_arith_equalImages(consSdram, ROWS, COLS, tmp1Sdram)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_arith_normalicer(tmp1Sdram, pixConSdram, ROWS, COLS, tmp1Sdram)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_arith_equalImages(consSdram, ROWS, COLS, tmp1Sdram))
+	CHECK_STATUS(preprocessing_arith_normalicer(tmp1Sdram, pixConSdram, ROWS, COLS, tmp1Sdram))
 
 
 	//ITERA
-	if((status = preprocessing_zero(ROWS, COLS, tmp2Sdram)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_zero(ROWS, COLS, tmp3Sdram)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_zero(ROWS, COLS, tmp4Sdram)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_zero(ROWS, COLS, tmp5Sdram)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_zero(ROWS, COLS, tmp6Sdram)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp2Sdram))
+	CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp3Sdram))
+	CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp4Sdram))
+	CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp5Sdram))
+	CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp6Sdram))
 
 	printf("\n------------------------------------------------\n");
 	printf("-----------------Calculate Itera-----------------\n");
 	printf("------------------------------------------------\n");
-	if((status = preprocessing_arith_iterate(consSdram, masksSdram, pixConSdram, dispSdram,
+	CHECK_STATUS(preprocessing_arith_iterate(consSdram, masksSdram, pixConSdram, dispSdram,
 			tmp2Sdram, tmp3Sdram, tmp4Sdram, tmp5Sdram, tmp6Sdram,
-			ROWS, COLS, LOOPS_ITERA, tmp1Sdram)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+			ROWS, COLS, LOOPS_ITERA, tmp1Sdram))
 	printf("\n------------------------------------------------\n");
 	printf("----------Itera calculated successfully----------\n");
 	printf("------------------------------------------------\n");

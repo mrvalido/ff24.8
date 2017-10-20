@@ -718,30 +718,30 @@ int preprocessing_arith_doGetConst(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sd
 	int status = PREPROCESSING_SUCCESSFUL;
 
 	//Calculate ROIs of masks
-	if((status = preprocessing_arith_ROI(sdSrc3 , rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_arith_ROI(sdSrc4 , rows, cols,  dx,  dy, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_arith_ROI(sdSrc3 , rows, cols, -dx, -dy, sdTmp1))
+	CHECK_STATUS(preprocessing_arith_ROI(sdSrc4 , rows, cols,  dx,  dy, sdTmp2))
 
 	//Multiply ROIs to obtain mksDouble
-	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp3)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp3))
 
-	if((status = preprocessing_zero(ROWS, COLS, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_zero(ROWS, COLS, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp1))
+	CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp2))
 
 	//Calculate ROI of images
-	if((status = preprocessing_arith_ROI(sdSrc1 , rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_arith_ROI(sdSrc2 , rows, cols,  dx,  dy, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_arith_ROI(sdSrc1 , rows, cols, -dx, -dy, sdTmp1))
+	CHECK_STATUS(preprocessing_arith_ROI(sdSrc2 , rows, cols,  dx,  dy, sdTmp2))
 
 	//Calculate Diff
-	if((status = preprocessing_arith_subtractImages(sdTmp1, sdTmp2, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp3, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_arith_subtractImages(sdTmp1, sdTmp2, rows, cols, sdTmp1))
+	CHECK_STATUS(preprocessing_arith_multiplyImages(sdTmp1, sdTmp3, rows, cols, sdTmp1))
 
 	//Apply diff to const
-	if((status = preprocessing_arith_addROI(sdDst1, sdTmp1, rows, cols, -dx, -dy, sdDst1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_arith_substractROI(sdDst1, sdTmp1, rows, cols, dx, dy, sdDst1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_arith_addROI(sdDst1, sdTmp1, rows, cols, -dx, -dy, sdDst1))
+	CHECK_STATUS(preprocessing_arith_substractROI(sdDst1, sdTmp1, rows, cols, dx, dy, sdDst1))
 
 	//Apply mskDouble to pixCount
-	if((status = preprocessing_arith_addROI(sdDst2, sdTmp3, rows, cols, -dx, -dy, sdDst2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_arith_addROI(sdDst2, sdTmp3, rows, cols,  dx,  dy, sdDst2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_arith_addROI(sdDst2, sdTmp3, rows, cols, -dx, -dy, sdDst2))
+	CHECK_STATUS(preprocessing_arith_addROI(sdDst2, sdTmp3, rows, cols,  dx,  dy, sdDst2))
 
 	return status;
  }
@@ -756,18 +756,18 @@ int preprocessing_arith_iterate(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc
 
 		printf("\tItera %d of %d\n", i+1, loops);
 
-		if((status = preprocessing_zero(ROWS, COLS, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-		if((status = preprocessing_zero(ROWS, COLS, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-		if((status = preprocessing_zero(ROWS, COLS, sdTmp3)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-		if((status = preprocessing_zero(ROWS, COLS, sdTmp4)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-		if((status = preprocessing_zero(ROWS, COLS, sdTmp5)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+		CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp1))
+		CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp2))
+		CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp3))
+		CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp4))
+		CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp5))
 
-		if((status = preprocessing_arith_doIteration(sdSrc1, sdSrc2, sdSrc3, sdSrc4,
+		CHECK_STATUS(preprocessing_arith_doIteration(sdSrc1, sdSrc2, sdSrc3, sdSrc4,
 										sdTmp1, sdTmp2, sdTmp3, sdTmp4, sdTmp5,
-										rows, cols, sdDst)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+										rows, cols, sdDst))
 	}
 
-	if((status = preprocessing_arith_flatfield(sdDst, sdSrc2, rows, cols, sdDst)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_arith_flatfield(sdDst, sdSrc2, rows, cols, sdDst))
 
 	return status;
 }
@@ -796,19 +796,19 @@ int preprocessing_arith_doIteration(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t s
 	}
 
 	//Creates a copy of Con (GainTmp)
-	if((status = preprocessing_arith_equalImages(sdSrc1, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_arith_equalImages(sdSrc1, rows, cols, sdTmp1))
 
 	for(unsigned short iq = 1; iq < NUMBER_OF_IMAGES; iq++) {
 
 		//Obtain iq mask
-		if((status = preprocessing_zero(ROWS, COLS, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-		if((status = preprocessing_getMask(sdSrc2, rows, cols, iq, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+		CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp2))
+		CHECK_STATUS(preprocessing_getMask(sdSrc2, rows, cols, iq, sdTmp2))
 
 		for(unsigned short ir = 0; ir < iq; ir++) {
 
 			//Obtain ir mask
-			if((status = preprocessing_zero(ROWS, COLS, sdTmp3)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-			if((status = preprocessing_getMask(sdSrc2, rows, cols, ir, sdTmp3)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+			CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp3))
+			CHECK_STATUS(preprocessing_getMask(sdSrc2, rows, cols, ir, sdTmp3))
 
 			//Calculate point
 			piq = iq*DISP_COLS;
@@ -823,15 +823,15 @@ int preprocessing_arith_doIteration(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t s
 			int dy = (int)eve_fp_subtract32(src4[piq], src4[pir])/FP32_BINARY_TRUE;
 			int dx = (int)eve_fp_subtract32(src4[piq + 1], src4[pir + 1])/FP32_BINARY_TRUE;
 
-			if((status = preprocessing_arith_doIterationTwoImages(sdDst, sdTmp2, sdTmp3, sdTmp4, sdTmp5, rows, cols, dx, dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+			CHECK_STATUS(preprocessing_arith_doIterationTwoImages(sdDst, sdTmp2, sdTmp3, sdTmp4, sdTmp5, rows, cols, dx, dy, sdTmp1))
 		}
 	}
 
 	//Normalize GainTmp
-	if((status = preprocessing_arith_normalicer(sdTmp1, sdSrc3, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_arith_normalicer(sdTmp1, sdSrc3, rows, cols, sdTmp1))
 
 	//Calculates mean (5-sigma)
-	if((status = preprocessing_arith_mean(sdTmp1, sdSrc3, rows, cols, sdTmp4)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_arith_mean(sdTmp1, sdSrc3, rows, cols, sdTmp4))
 
 	// Check for valid pointer position.
 	PREPROCESSING_DEF_CHECK_POINTER(tmp4, 0, size);
@@ -841,7 +841,7 @@ int preprocessing_arith_doIteration(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t s
 	uint32_t mean = tmp4[0];
 	uint32_t fiveSigma = tmp4[1];
 
-	if((status = preprocessing_arith_criba_fivesigma(sdTmp1, mean, fiveSigma, rows, cols, sdTmp5)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_arith_criba_fivesigma(sdTmp1, mean, fiveSigma, rows, cols, sdTmp5))
 
 	PREPROCESSING_DEF_CHECK_POINTER(tmp5, 0, size);
 	PREPROCESSING_DEF_CHECK_POINTER(tmp5, 1, size);
@@ -852,7 +852,7 @@ int preprocessing_arith_doIteration(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t s
 	uint32_t aver = eve_fp_divide32(sum, npix, FP32_FWL);
 
 	//Update Gain
-	if((status = preprocessing_arith_subtractScalar(sdTmp1, rows, cols, aver, sdDst)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_arith_subtractScalar(sdTmp1, rows, cols, aver, sdDst))
 
 	return status;
 }
@@ -864,26 +864,26 @@ int preprocessing_arith_doIterationTwoImages(uint32_t sdSrc1, uint32_t sdSrc2, u
 	int status = PREPROCESSING_SUCCESSFUL;
 
 	//Cleaning Temps
-	if((status = preprocessing_zero(ROWS, COLS, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_zero(ROWS, COLS, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp1))
+	CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp2))
 
 	//Calculate ROI masks
-	if((status = preprocessing_arith_ROI(sdSrc2 , rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_arith_ROI(sdSrc3 , rows, cols,  dx,  dy, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_arith_ROI(sdSrc2 , rows, cols, -dx, -dy, sdTmp1))
+	CHECK_STATUS(preprocessing_arith_ROI(sdSrc3 , rows, cols,  dx,  dy, sdTmp2))
 
 	//Calculate mskDouble
-	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp2)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp2))
 
 	//Modify GainTmp
-	if((status = preprocessing_zero(ROWS, COLS, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_arith_ROI(sdSrc1, rows, cols, -dx, -dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_arith_addROI(sdDst, sdTmp1, rows, cols, dx, dy, sdDst)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp1))
+	CHECK_STATUS(preprocessing_arith_ROI(sdSrc1, rows, cols, -dx, -dy, sdTmp1))
+	CHECK_STATUS(preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp1))
+	CHECK_STATUS(preprocessing_arith_addROI(sdDst, sdTmp1, rows, cols, dx, dy, sdDst))
 
-	if((status = preprocessing_zero(ROWS, COLS, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_arith_ROI(sdSrc1, rows, cols,  dx,  dy, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp1)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
-	if((status = preprocessing_arith_addROI(sdDst, sdTmp1, rows, cols,  -dx,  -dy, sdDst)) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
+	CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp1))
+	CHECK_STATUS(preprocessing_arith_ROI(sdSrc1, rows, cols,  dx,  dy, sdTmp1))
+	CHECK_STATUS(preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp1))
+	CHECK_STATUS(preprocessing_arith_addROI(sdDst, sdTmp1, rows, cols,  -dx,  -dy, sdDst))
 
 	return status;
 }
