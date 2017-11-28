@@ -59,19 +59,25 @@ void createNANDFLASH(int32_t *NANDFLASH, int32_t **entriesOfNAND, int stdimagesi
 	uint32_t	img8Nand = img7Nand + stdimagesize;
 	uint32_t	img9Nand = img8Nand + stdimagesize;
 	uint32_t	maskNand = img9Nand + stdimagesize;
-	uint32_t	dispNand = maskNand + stdimagesize;
+	uint32_t	maskTmp	 = maskNand + stdimagesize;
+	uint32_t	cons	 = maskTmp  + stdimagesize;
+	uint32_t	pixCount = cons 	+ stdimagesize;
+	uint32_t	dispNand = pixCount + stdimagesize;
 
-	entriesOfNAND[0] =(NANDFLASH+img1Nand);
-	entriesOfNAND[1] =(NANDFLASH+img2Nand);
-	entriesOfNAND[2] =(NANDFLASH+img3Nand);
-	entriesOfNAND[3] =(NANDFLASH+img4Nand);
-	entriesOfNAND[4] =(NANDFLASH+img5Nand);
-	entriesOfNAND[5] =(NANDFLASH+img6Nand);
-	entriesOfNAND[6] =(NANDFLASH+img7Nand);
-	entriesOfNAND[7] =(NANDFLASH+img8Nand);
-	entriesOfNAND[8] =(NANDFLASH+img9Nand);
-	entriesOfNAND[9] =(NANDFLASH+maskNand);
-	entriesOfNAND[10]=(NANDFLASH+dispNand);
+	entriesOfNAND[0]  = (NANDFLASH+img1Nand);
+	entriesOfNAND[1]  = (NANDFLASH+img2Nand);
+	entriesOfNAND[2]  = (NANDFLASH+img3Nand);
+	entriesOfNAND[3]  = (NANDFLASH+img4Nand);
+	entriesOfNAND[4]  = (NANDFLASH+img5Nand);
+	entriesOfNAND[5]  = (NANDFLASH+img6Nand);
+	entriesOfNAND[6]  = (NANDFLASH+img7Nand);
+	entriesOfNAND[7]  = (NANDFLASH+img8Nand);
+	entriesOfNAND[8]  = (NANDFLASH+img9Nand);
+	entriesOfNAND[9]  = (NANDFLASH+maskNand);
+	entriesOfNAND[10] = (NANDFLASH+maskTmp);
+	entriesOfNAND[11] = (NANDFLASH+cons);
+	entriesOfNAND[12] = (NANDFLASH+pixCount);
+	entriesOfNAND[13] = (NANDFLASH+dispNand);
 
 	//READ DISP
 	int MAXCHAR = 1000;
@@ -725,25 +731,29 @@ int preprocessing_getMask(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint16_t
     return status;
 }
 
-int preprocessing_arith_doGetConst(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3, uint32_t sdSrc4,
-		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3,
-		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, uint32_t sdDst1, uint32_t sdDst2){
+int preprocessing_arith_doGetConst(uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3,
+		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, int16_t iq, int16_t ir, uint32_t sdDst1, uint32_t sdDst2){
 
 	int status = PREPROCESSING_SUCCESSFUL;
 
+	//Calculate Mask of each image
+	readNAND(entriesOfNAND[MASK_TMP_INDEX], ROWS, COLS, sdTmp1);
+	CHECK_STATUS(preprocessing_getMask(sdTmp1, ROWS, COLS, ir, sdTmp2))
+	CHECK_STATUS(preprocessing_getMask(sdTmp1, ROWS, COLS, iq, sdTmp1))
+
 	//Calculate ROIs of masks
-	CHECK_STATUS(preprocessing_arith_ROI(sdSrc3 , rows, cols, -dx, -dy, sdTmp1))
-	CHECK_STATUS(preprocessing_arith_ROI(sdSrc4 , rows, cols,  dx,  dy, sdTmp2))
+	CHECK_STATUS(preprocessing_arith_ROI(sdTmp1 , rows, cols, -dx, -dy, sdTmp1))
+	CHECK_STATUS(preprocessing_arith_ROI(sdTmp2 , rows, cols,  dx,  dy, sdTmp2))
 
 	//Multiply ROIs to obtain mksDouble
 	CHECK_STATUS(preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp3))
 
-	CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp1))
-	CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp2))
+	readNAND(entriesOfNAND[iq], ROWS, COLS, sdTmp1);
+	readNAND(entriesOfNAND[ir], ROWS, COLS, sdTmp2);
 
 	//Calculate ROI of images
-	CHECK_STATUS(preprocessing_arith_ROI(sdSrc1 , rows, cols, -dx, -dy, sdTmp1))
-	CHECK_STATUS(preprocessing_arith_ROI(sdSrc2 , rows, cols,  dx,  dy, sdTmp2))
+	CHECK_STATUS(preprocessing_arith_ROI(sdTmp1 , rows, cols, -dx, -dy, sdTmp1))
+	CHECK_STATUS(preprocessing_arith_ROI(sdTmp2 , rows, cols,  dx,  dy, sdTmp2))
 
 	//Calculate Diff
 	CHECK_STATUS(preprocessing_arith_subtractImages(sdTmp1, sdTmp2, rows, cols, sdTmp1))
@@ -760,8 +770,7 @@ int preprocessing_arith_doGetConst(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sd
 	return status;
  }
 
-int preprocessing_arith_iterate(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3, uint32_t sdSrc4,
-		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3, uint32_t sdTmp4, uint32_t sdTmp5,
+int preprocessing_arith_iterate(uint32_t sdSrc, uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3,
 		uint16_t rows, uint16_t cols, uint16_t loops, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
@@ -773,21 +782,18 @@ int preprocessing_arith_iterate(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc
 		CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp1))
 		CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp2))
 		CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp3))
-		CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp4))
-		CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp5))
 
-		CHECK_STATUS(preprocessing_arith_doIteration(sdSrc1, sdSrc2, sdSrc3, sdSrc4,
-										sdTmp1, sdTmp2, sdTmp3, sdTmp4, sdTmp5,
+		CHECK_STATUS(preprocessing_arith_doIteration(sdSrc, sdTmp1, sdTmp2, sdTmp3,
 										rows, cols, sdDst))
 	}
 
-	CHECK_STATUS(preprocessing_arith_flatfield(sdDst, sdSrc2, rows, cols, sdDst))
+	readNAND(entriesOfNAND[MASK_TMP_INDEX], ROWS, COLS, sdTmp1);
+	CHECK_STATUS(preprocessing_arith_flatfield(sdDst, sdTmp1, rows, cols, sdDst))
 
 	return status;
 }
 
-int preprocessing_arith_doIteration(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3, uint32_t sdSrc4,
-		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3, uint32_t sdTmp4, uint32_t sdTmp5,
+int preprocessing_arith_doIteration(uint32_t sdSrc, uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3,
 		uint16_t rows, uint16_t cols, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
@@ -797,71 +803,64 @@ int preprocessing_arith_doIteration(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t s
 	unsigned int piq = 0;
 	unsigned int pir = 0;
 
-	const int32_t* src4 = preprocessing_vmem_getDataAddress(sdSrc4); 		//Disp
-	const int32_t* tmp4 = preprocessing_vmem_getDataAddress(sdTmp4);
-	const int32_t* tmp5 = preprocessing_vmem_getDataAddress(sdTmp5);
+	const int32_t* src = preprocessing_vmem_getDataAddress(sdSrc); 		//Disp
+	int32_t* tmp2 = preprocessing_vmem_getDataAddress(sdTmp2);
+	int32_t* tmp3 = preprocessing_vmem_getDataAddress(sdTmp3);
 
 	// Check whether given rows and columns are in a valid range.
-	if ((!preprocessing_vmem_isProcessingSizeValid(sdSrc4, DISP_ROWS, DISP_COLS))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp4, rows, cols))
-			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp5, rows, cols)))
+	if ((!preprocessing_vmem_isProcessingSizeValid(sdSrc, DISP_ROWS, DISP_COLS))
+			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp2, rows, cols))
+			|| (!preprocessing_vmem_isProcessingSizeValid(sdTmp3, rows, cols)))
 	{
 		return PREPROCESSING_INVALID_SIZE;
 	}
 
-	//Creates a copy of Con (GainTmp)
-	CHECK_STATUS(preprocessing_arith_equalImages(sdSrc1, rows, cols, sdTmp1))
+	//Read Const from NAND (GainTmp)
+	readNAND(entriesOfNAND[CONS_INDEX], ROWS, COLS, sdTmp1);
 
 	for(unsigned short iq = 1; iq < NUMBER_OF_IMAGES; iq++) {
 
-		//Obtain iq mask
-		CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp2))
-		CHECK_STATUS(preprocessing_getMask(sdSrc2, rows, cols, iq, sdTmp2))
-
 		for(unsigned short ir = 0; ir < iq; ir++) {
-
-			//Obtain ir mask
-			CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp3))
-			CHECK_STATUS(preprocessing_getMask(sdSrc2, rows, cols, ir, sdTmp3))
 
 			//Calculate point
 			piq = iq*DISP_COLS;
 			pir = ir*DISP_COLS;
 
 			// Check for valid pointer position.
-			PREPROCESSING_DEF_CHECK_POINTER(src4, piq, sizeDisp);
-			PREPROCESSING_DEF_CHECK_POINTER(src4, piq+1, sizeDisp);
-			PREPROCESSING_DEF_CHECK_POINTER(src4, pir, sizeDisp);
-			PREPROCESSING_DEF_CHECK_POINTER(src4, pir+1, sizeDisp);
+			PREPROCESSING_DEF_CHECK_POINTER(src, piq, sizeDisp);
+			PREPROCESSING_DEF_CHECK_POINTER(src, piq+1, sizeDisp);
+			PREPROCESSING_DEF_CHECK_POINTER(src, pir, sizeDisp);
+			PREPROCESSING_DEF_CHECK_POINTER(src, pir+1, sizeDisp);
 
-			int dy = (int)eve_fp_subtract32(src4[piq], src4[pir])/FP32_BINARY_TRUE;
-			int dx = (int)eve_fp_subtract32(src4[piq + 1], src4[pir + 1])/FP32_BINARY_TRUE;
+			int dy = (int)eve_fp_subtract32(src[piq], src[pir])/FP32_BINARY_TRUE;
+			int dx = (int)eve_fp_subtract32(src[piq + 1], src[pir + 1])/FP32_BINARY_TRUE;
 
-			CHECK_STATUS(preprocessing_arith_doIterationTwoImages(sdDst, sdTmp2, sdTmp3, sdTmp4, sdTmp5, rows, cols, dx, dy, sdTmp1))
+			CHECK_STATUS(preprocessing_arith_doIterationTwoImages(sdDst, sdTmp2, sdTmp3, rows, cols, dx, dy, iq, ir, sdTmp1))
 		}
 	}
 
 	//Normalize GainTmp
-	CHECK_STATUS(preprocessing_arith_normalicer(sdTmp1, sdSrc3, rows, cols, sdTmp1))
+	readNAND(entriesOfNAND[PIXCOUNT_INDEX], ROWS, COLS, sdTmp2);
+	CHECK_STATUS(preprocessing_arith_normalicer(sdTmp1, sdTmp2, rows, cols, sdTmp1))
 
 	//Calculates mean (5-sigma)
-	CHECK_STATUS(preprocessing_arith_mean(sdTmp1, sdSrc3, rows, cols, sdTmp4))
+	CHECK_STATUS(preprocessing_arith_mean(sdTmp1, sdTmp2, rows, cols, sdTmp3))
 
 	// Check for valid pointer position.
-	PREPROCESSING_DEF_CHECK_POINTER(tmp4, 0, size);
-	PREPROCESSING_DEF_CHECK_POINTER(tmp4, 1, size);
-	PREPROCESSING_DEF_CHECK_POINTER(tmp4, 2, size);
-	PREPROCESSING_DEF_CHECK_POINTER(tmp4, 3, size);
-	uint32_t mean = tmp4[0];
-	uint32_t fiveSigma = tmp4[1];
+	PREPROCESSING_DEF_CHECK_POINTER(tmp3, 0, size);
+	PREPROCESSING_DEF_CHECK_POINTER(tmp3, 1, size);
+	PREPROCESSING_DEF_CHECK_POINTER(tmp3, 2, size);
+	PREPROCESSING_DEF_CHECK_POINTER(tmp3, 3, size);
+	uint32_t mean = tmp3[0];
+	uint32_t fiveSigma = tmp3[1];
 
-	CHECK_STATUS(preprocessing_arith_criba_fivesigma(sdTmp1, mean, fiveSigma, rows, cols, sdTmp5))
+	CHECK_STATUS(preprocessing_arith_criba_fivesigma(sdTmp1, mean, fiveSigma, rows, cols, sdTmp2))
 
-	PREPROCESSING_DEF_CHECK_POINTER(tmp5, 0, size);
-	PREPROCESSING_DEF_CHECK_POINTER(tmp5, 1, size);
+	PREPROCESSING_DEF_CHECK_POINTER(tmp2, 0, size);
+	PREPROCESSING_DEF_CHECK_POINTER(tmp2, 1, size);
 
-	uint32_t sum = eve_fp_subtract32(tmp4[3], tmp5[0]);
-	uint32_t npix = eve_fp_subtract32(tmp4[2], tmp5[1]);
+	uint32_t sum = eve_fp_subtract32(tmp3[3], tmp2[0]);
+	uint32_t npix = eve_fp_subtract32(tmp3[2], tmp2[1]);
 
 	uint32_t aver = eve_fp_divide32(sum, npix, FP32_FWL);
 
@@ -871,31 +870,31 @@ int preprocessing_arith_doIteration(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t s
 	return status;
 }
 
-int preprocessing_arith_doIterationTwoImages(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3,
-		uint32_t sdTmp1, uint32_t sdTmp2,
-		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, uint32_t sdDst){
+int preprocessing_arith_doIterationTwoImages(uint32_t Src, uint32_t sdTmp1, uint32_t sdTmp2,
+		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, int16_t iq, int16_t ir, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
 
-	//Cleaning Temps
-	CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp1))
-	CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp2))
+	//Obtain Mask iq, ir
+	readNAND(entriesOfNAND[MASK_TMP_INDEX], ROWS, COLS, sdTmp1);
+	CHECK_STATUS(preprocessing_getMask(sdTmp1, rows, cols, ir, sdTmp2))
+	CHECK_STATUS(preprocessing_getMask(sdTmp1, rows, cols, iq, sdTmp1))
 
 	//Calculate ROI masks
-	CHECK_STATUS(preprocessing_arith_ROI(sdSrc2 , rows, cols, -dx, -dy, sdTmp1))
-	CHECK_STATUS(preprocessing_arith_ROI(sdSrc3 , rows, cols,  dx,  dy, sdTmp2))
+	CHECK_STATUS(preprocessing_arith_ROI(sdTmp1 , rows, cols, -dx, -dy, sdTmp1))
+	CHECK_STATUS(preprocessing_arith_ROI(sdTmp2 , rows, cols,  dx,  dy, sdTmp2))
 
 	//Calculate mskDouble
 	CHECK_STATUS(preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp2))
 
 	//Modify GainTmp
 	CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp1))
-	CHECK_STATUS(preprocessing_arith_ROI(sdSrc1, rows, cols, -dx, -dy, sdTmp1))
+	CHECK_STATUS(preprocessing_arith_ROI(Src, rows, cols, -dx, -dy, sdTmp1))
 	CHECK_STATUS(preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp1))
 	CHECK_STATUS(preprocessing_arith_addROI(sdDst, sdTmp1, rows, cols, dx, dy, sdDst))
 
 	CHECK_STATUS(preprocessing_zero(ROWS, COLS, sdTmp1))
-	CHECK_STATUS(preprocessing_arith_ROI(sdSrc1, rows, cols,  dx,  dy, sdTmp1))
+	CHECK_STATUS(preprocessing_arith_ROI(Src, rows, cols,  dx,  dy, sdTmp1))
 	CHECK_STATUS(preprocessing_arith_multiplyImages(sdTmp1, sdTmp2, rows, cols, sdTmp1))
 	CHECK_STATUS(preprocessing_arith_addROI(sdDst, sdTmp1, rows, cols,  -dx,  -dy, sdDst))
 

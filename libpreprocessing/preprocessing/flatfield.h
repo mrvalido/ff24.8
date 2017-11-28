@@ -20,6 +20,9 @@ int readNAND(int32_t *nandSrc, uint16_t rows, uint16_t cols, uint32_t sdDst);
 int writeNAND(uint32_t sdSrc, uint16_t rows, uint16_t cols, int32_t *nandDst);
 //END OF NAND FLASH METHODS
 
+int32_t **entriesOfNAND;
+
+
 /**
      * Fills an image with zero
      *
@@ -208,10 +211,6 @@ int preprocessing_getMask(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint16_t
 /**
      * Get algorithm's constant term of two images
      *
-     * @param sdSrc1 	the VMEM (SDRAM) address of log10 image 1.
-     * @param sdSrc2 	the VMEM (SDRAM) address of log10 image 2.
-     * @param sdSrc3 	the VMEM (SDRAM) address of mask of image 1.
-     * @param sdSrc4 	the VMEM (SDRAM) address of mask of image 2.
      * @param sdTmp1 	the VMEM (SDRAM) address of temporal image.
      * @param sdTmp2 	the VMEM (SDRAM) address of temporal image.
      * @param sdTmp3 	the VMEM (SDRAM) address of temporal image.
@@ -219,78 +218,66 @@ int preprocessing_getMask(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint16_t
      * @param cols   	the number of image columns.
      * @param dx  	 	the offset X.
      * @param dy     	the offset Y.
+     * @param iq		index of image iq
+     * @param ir		index of image ir
      * @param sdDst1  	the VMEM (SDRAM) address of const.
      * @param sdDst2  	the VMEM (SDRAM) address of pixCount.
      *
      * @return PREPROCESSING_SUCCESSFUL on success, failure code otherwise.
      */
-int preprocessing_arith_doGetConst(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3, uint32_t sdSrc4,
-		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3,
-		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, uint32_t sdDst1, uint32_t sdDst2);
+int preprocessing_arith_doGetConst(uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3,
+		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, int16_t iq, int16_t ir, uint32_t sdDst1, uint32_t sdDst2);
 
 /**
      * Calculates Iterate
      *
-     * @param sdSrc1 	the VMEM (SDRAM) address of const.
-     * @param sdSrc2 	the VMEM (SDRAM) address of masks.
-     * @param sdSrc3 	the VMEM (SDRAM) address of pixCnt.
-     * @param sdSrc4 	the VMEM (SDRAM) address of disp.
+     * @param sdSrc 	the VMEM (SDRAM) address of disp.
      * @param sdTmp1 	the VMEM (SDRAM) address of temporal image.
      * @param sdTmp2 	the VMEM (SDRAM) address of temporal image.
      * @param sdTmp3 	the VMEM (SDRAM) address of temporal image.
-     * @param sdTmp4 	the VMEM (SDRAM) address of temporal image.
-     * @param sdTmp5 	the VMEM (SDRAM) address of temporal image.
      * @param rows   	the number of image rows.
      * @param cols   	the number of image columns.
      * @param loops 	the number of inner for loop iterations
-     * @param sdDst1  	the VMEM (SDRAM) address of gain.
+     * @param sdDst  	the VMEM (SDRAM) address of gain.
      *
      * @return PREPROCESSING_SUCCESSFUL on success, failure code otherwise.
      */
-int preprocessing_arith_iterate(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3, uint32_t sdSrc4,
-		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3, uint32_t sdTmp4, uint32_t sdTmp5,
+int preprocessing_arith_iterate(uint32_t sdSrc, uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3,
 		uint16_t rows, uint16_t cols, uint16_t loops, uint32_t sdDst);
 
 /**
      * Calculates one Iteration
      *
-     * @param sdSrc1 	the VMEM (SDRAM) address of const.
-     * @param sdSrc2 	the VMEM (SDRAM) address of masks.
-     * @param sdSrc3 	the VMEM (SDRAM) address of pixCnt.
      * @param sdSrc4 	the VMEM (SDRAM) address of disp.
      * @param sdTmp1 	the VMEM (SDRAM) address of temporal image.
      * @param sdTmp2 	the VMEM (SDRAM) address of temporal image.
      * @param sdTmp3 	the VMEM (SDRAM) address of temporal image.
-     * @param sdTmp4 	the VMEM (SDRAM) address of temporal image.
-     * @param sdTmp5 	the VMEM (SDRAM) address of temporal image.
      * @param rows   	the number of image rows.
      * @param cols   	the number of image columns.
-     * @param sdDst1  	the VMEM (SDRAM) address of gain.
+     * @param sdDst  	the VMEM (SDRAM) address of gain.
      *
      * @return PREPROCESSING_SUCCESSFUL on success, failure code otherwise.
      */
-int preprocessing_arith_doIteration(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3, uint32_t sdSrc4,
-		uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3, uint32_t sdTmp4, uint32_t sdTmp5,
+int preprocessing_arith_doIteration(uint32_t sdSrc, uint32_t sdTmp1, uint32_t sdTmp2, uint32_t sdTmp3,
 		uint16_t rows, uint16_t cols, uint32_t sdDst);
 
 /**
      * Calculate gain of two images for doIteration function
      *
-     * @param sdSrc1 	the VMEM (SDRAM) address of gain.
-     * @param sdSrc2 	the VMEM (SDRAM) address of mask 1.
-     * @param sdSrc3 	the VMEM (SDRAM) address of mask 2.
+     * @param sdSrc 	the VMEM (SDRAM) address of gain.
      * @param sdTmp1 	the VMEM (SDRAM) address of temporal image.
      * @param sdTmp2 	the VMEM (SDRAM) address of temporal image.
      * @param rows   	the number of image rows.
      * @param cols   	the number of image columns.
      * @param dx  	 	the offset X.
      * @param dy     	the offset Y.
+     * @param iq		index of image iq
+     * @param ir		index of image ir
      * @param sdDst  	the VMEM (SDRAM) address of gainTmp.
      *
      * @return PREPROCESSING_SUCCESSFUL on success, failure code otherwise.
      */
-int preprocessing_arith_doIterationTwoImages(uint32_t sdSrc1, uint32_t sdSrc2, uint32_t sdSrc3,
-		uint32_t sdTmp1, uint32_t sdTmp2,
-		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, uint32_t sdDst);
+int preprocessing_arith_doIterationTwoImages(uint32_t Src, uint32_t sdTmp1, uint32_t sdTmp2,
+		uint16_t rows, uint16_t cols, int16_t dx, int16_t dy, int16_t iq, int16_t ir, uint32_t sdDst);
 
 #endif /* LIBPREPROCESSING_PREPROCESSING_HOUGH_H_ */
