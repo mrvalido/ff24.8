@@ -1,5 +1,5 @@
 /*
- * hough.h
+ * Flatfield.h
  *
  *  Created on: 17 may. 2017
  *      Author: zaca
@@ -138,6 +138,18 @@ int16_t max(int16_t a, int16_t b);
     * @return minimum value.
     */
 int16_t min(int16_t a, int16_t b);
+
+
+/**
+    * Convert double to floating point, rounding the number first
+    *
+    * @param value  		Original value in double
+    * @param fractionBits  	Word length
+    *
+    * @return value converted.
+    */
+int32_t eve_fp_double2s32rounded(double value, unsigned int fractionBits);
+
 
 /**
     * Calculates mean (5-sigma)

@@ -59,7 +59,6 @@ int main()
 	int32_t *img01;
 	int32_t *img02;
 	int32_t *disp;
-	int32_t *mean;
 	int32_t *masks;
 	int32_t *cons;
 	int32_t *pixCon;
@@ -72,7 +71,6 @@ int main()
 
 	uint32_t stdimagesize=ROWS*COLS;
 	uint32_t stdDispSize = DISP_ROWS*DISP_COLS;
-	uint32_t stdMeanSize = 1;
 	uint32_t numberOfMemoryInput = 16;
 
 	int status = PREPROCESSING_SUCCESSFUL;
@@ -106,50 +104,45 @@ int main()
 	uint32_t	dispSize  = stdDispSize;
 	uint32_t	dispDatasetId = 3;
 
-	uint32_t	meanSdram = dispSdram + dispSize;
-	uint32_t	meanSize  = stdMeanSize;
-	uint32_t	meanDatasetId = 4;
-
-	uint32_t	masksSdram = meanSdram + meanSize;
+	uint32_t	masksSdram = dispSdram + dispSize;
 	uint32_t	masksSize = stdimagesize;
-	uint32_t	masksDatasetId = 5;
+	uint32_t	masksDatasetId = 4;
 
 	uint32_t	consSdram = masksSdram + masksSize;
 	uint32_t	consSize = stdimagesize;
-	uint32_t	consDatasetId = 6;
+	uint32_t	consDatasetId = 5;
 
 	uint32_t	pixConSdram = consSdram + consSize;
 	uint32_t	pixConSize = stdimagesize;
-	uint32_t	pixConDatasetId = 7;
+	uint32_t	pixConDatasetId = 6;
 
 	uint32_t	tmp1Sdram = pixConSdram + pixConSize;
 	uint32_t	tmp1Size = stdimagesize;
-	uint32_t	tmp1DatasetId = 8;
+	uint32_t	tmp1DatasetId = 7;
 
 	uint32_t	tmp2Sdram = tmp1Sdram + tmp1Size;
 	uint32_t	tmp2Size = stdimagesize;
-	uint32_t	tmp2DatasetId = 9;
+	uint32_t	tmp2DatasetId = 8;
 
 	uint32_t	tmp3Sdram = tmp2Sdram + tmp2Size;
 	uint32_t	tmp3Size = stdimagesize;
-	uint32_t	tmp3DatasetId = 10;
+	uint32_t	tmp3DatasetId = 9;
 
 	uint32_t	tmp4Sdram = tmp3Sdram + tmp3Size;
 	uint32_t	tmp4Size = stdimagesize;
-	uint32_t	tmp4DatasetId = 11;
+	uint32_t	tmp4DatasetId = 10;
 
 	uint32_t	tmp5Sdram = tmp4Sdram + tmp4Size;
 	uint32_t	tmp5Size = stdimagesize;
-	uint32_t	tmp5DatasetId = 12;
+	uint32_t	tmp5DatasetId = 11;
 
 	uint32_t	tmp6Sdram = tmp5Sdram + tmp5Size;
 	uint32_t	tmp6Size = stdimagesize;
-	uint32_t	tmp6DatasetId = 13;
+	uint32_t	tmp6DatasetId = 12;
 
 	img01=(SDRAM+img01Sdram);
 	img02=(SDRAM+img02Sdram);
 	disp=(SDRAM+dispSdram);
-	mean=(SDRAM+meanSdram);
 	masks=(SDRAM+masksSdram);
 	cons=(SDRAM+consSdram);
 	pixCon=(SDRAM+pixConSdram);
@@ -164,7 +157,6 @@ int main()
 	preprocessing_vmem_setEntry(img02Sdram, img02Size, img02DatasetId, img02);
 
 	preprocessing_vmem_setEntry(dispSdram, dispSize, dispDatasetId, disp);
-	preprocessing_vmem_setEntry(meanSdram, meanSize, meanDatasetId, mean);
 	preprocessing_vmem_setEntry(masksSdram, masksSize, masksDatasetId, masks);
 	preprocessing_vmem_setEntry(consSdram, consSize, consDatasetId, cons);
 	preprocessing_vmem_setEntry(pixConSdram, pixConSize, pixConDatasetId, pixCon);
@@ -277,9 +269,9 @@ int main()
 
 	//END ITERA
 
-	writeImageToFile(cons, "const.fits", -1, 0, stdimagesize );
-	writeImageToFile(pixCon, "pixCon.fits", -1, 0, stdimagesize );
-	writeImageToFile(tmp1, "Gain.fits", -1, 0, stdimagesize );
+	writeImageToFile(cons, "im/const.fits", -1, 0, stdimagesize );
+	writeImageToFile(pixCon, "im/pixCon.fits", -1, 0, stdimagesize );
+	writeImageToFile(tmp1, "im/Gain.fits", -1, 0, stdimagesize );
 
 	printf("Done!\n");
 	return 1;

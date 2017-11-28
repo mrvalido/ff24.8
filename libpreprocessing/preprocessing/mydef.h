@@ -8,13 +8,13 @@
 #ifndef LIBPREPROCESSING_PREPROCESSING_MYDEF_H_
 #define LIBPREPROCESSING_PREPROCESSING_MYDEF_H_
 
-#define XC 1024 // center coordinate of CCD
-#define YC 1024 // center coordinate of CCD
+#define ROWS 1024
+#define COLS 1024
+
+#define XC (ROWS/2) // center coordinate of CCD
+#define YC (COLS/2) // center coordinate of CCD
 
 #define WIDTH_RADIO 8 //ancho del aro del circulo en pixels
-
-#define ROWS 2048
-#define COLS 2048
 
 #define STEP_HOUGH 1.0
 #define CENTER_DIST 100 //

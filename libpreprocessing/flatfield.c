@@ -1,5 +1,5 @@
 /*
- * hough.c
+ * Flatfield.c
  *
  *  Created on: 16 may. 2017
  *      Author: zaca
@@ -77,7 +77,7 @@ void createNANDFLASH(int32_t *NANDFLASH, int32_t **entriesOfNAND, int stdimagesi
 	int MAXCHAR = 1000;
 	FILE *fp2;
 	char str[MAXCHAR];
-	char* filename = "disp.txt";
+	char* filename = "im/disp.txt";
 
 	fp2 = fopen(filename, "r");
 	if (fp2 == NULL){
@@ -498,6 +498,19 @@ int16_t min(int16_t a, int16_t b){
 	return b;
 }
 
+int32_t eve_fp_double2s32rounded(double value, unsigned int fractionBits)
+{
+    int32_t result
+        = (int32_t)(round(fabs(value) * (1 << fractionBits)));
+
+    if (value < 0)
+    {
+        result = (int32_t)(-result);
+    }
+
+    return result;
+}
+
 int preprocessing_arith_mean(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t cols, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
@@ -618,7 +631,7 @@ int preprocessing_arith_criba_fivesigma(uint32_t sdSrc, uint32_t mean, uint32_t 
 	PREPROCESSING_DEF_CHECK_POINTER(dst, 1, size);
 
 	dst[0] = sum;
-	dst[1] =  eve_fp_int2s32(npix, FP32_FWL);
+	dst[1] = eve_fp_int2s32(npix, FP32_FWL);
 
 	if (dst[0] == EVE_FP32_NAN || dst[1] == EVE_FP32_NAN){
 		status = PREPROCESSING_INVALID_NUMBER;
@@ -660,7 +673,8 @@ int preprocessing_arith_flatfield(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t row
 			PREPROCESSING_DEF_CHECK_POINTER(dst, p, size);
 
 			if (eve_fp_compare32(src2 + p, &zero) != 0){
-				dst[p] = eve_fp_double2s32( pow(10.0, eve_fp_signed32ToDouble( src1[p] , FP32_FWL)), FP32_FWL);
+				double n = pow(10.0, eve_fp_signed32ToDouble( src1[p] , FP32_FWL));
+				dst[p] = eve_fp_double2s32rounded( n, FP32_FWL);
 			}
 
 			if (dst[p] == EVE_FP32_NAN){
