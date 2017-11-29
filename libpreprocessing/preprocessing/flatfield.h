@@ -142,17 +142,15 @@ int16_t max(int16_t a, int16_t b);
     */
 int16_t min(int16_t a, int16_t b);
 
-
 /**
     * Convert double to floating point, rounding the number first
     *
     * @param value  		Original value in double
     * @param fractionBits  	Word length
     *
-    * @return value converted.
+    * @return value converted to floating point.
     */
 int32_t eve_fp_double2s32rounded(double value, unsigned int fractionBits);
-
 
 /**
     * Calculates mean (5-sigma)
@@ -248,7 +246,7 @@ int preprocessing_arith_iterate(uint32_t sdSrc, uint32_t sdTmp1, uint32_t sdTmp2
 /**
      * Calculates one Iteration
      *
-     * @param sdSrc4 	the VMEM (SDRAM) address of disp.
+     * @param sdSrc 	the VMEM (SDRAM) address of disp.
      * @param sdTmp1 	the VMEM (SDRAM) address of temporal image.
      * @param sdTmp2 	the VMEM (SDRAM) address of temporal image.
      * @param sdTmp3 	the VMEM (SDRAM) address of temporal image.

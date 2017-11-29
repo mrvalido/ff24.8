@@ -8,8 +8,8 @@
 #ifndef LIBPREPROCESSING_PREPROCESSING_MYDEF_H_
 #define LIBPREPROCESSING_PREPROCESSING_MYDEF_H_
 
-#define ROWS 1024
-#define COLS 1024
+#define ROWS 2048
+#define COLS 2048
 
 #define XC (ROWS/2) // center coordinate of CCD
 #define YC (COLS/2) // center coordinate of CCD
