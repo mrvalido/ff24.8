@@ -8,6 +8,7 @@
 
 
 #include "fitsio.h"
+#include <stdint.h>
 
 /*
  * Inputs:

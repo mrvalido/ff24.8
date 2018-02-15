@@ -1,17 +1,11 @@
-
-
-
-#include "preprocessing/def.h"
-#include "preprocessing/mydef.h"
-#include "preprocessing/vmem.h"
-#include "preprocessing/ana.h"
-#include "preprocessing/arith.h"
-#include "preprocessing/flatfield.h"
-
-
+#include "libpreprocessing/preprocessing/def.h"
+#include "libpreprocessing/preprocessing/vmem.h"
+#include "libpreprocessing/preprocessing/ana.h"
+#include "libpreprocessing/preprocessing/arith.h"
+#include "libpreprocessing/preprocessing/flatfield.h"
 
 /* from libeve */
-#include "../libeve/eve/fixed_point.h"
+#include "libeve/eve/fixed_point.h"
 
 /* from std c */
 #include <stdio.h>
@@ -19,7 +13,10 @@
 #include <math.h>
 #include <string.h>
 
-#include "FITS_Interface.h"
+#include "fits/FITS_Interface.h"
+#include "libpreprocessing/preprocessing/def_flatfield.h"
+
+#include "udp/udp.h"
 
 void writeImageToFile(int32_t *img, char *fileName, int positionIndex,  int index, uint32_t stdimagesize ){
 	FILE *fp;
@@ -43,6 +40,7 @@ void writeImageToFile(int32_t *img, char *fileName, int positionIndex,  int inde
 
 	printf("File %s written successfully!\n", file);
 }
+
 
 
 /*
@@ -132,22 +130,22 @@ int main()
 	entriesOfNAND = (int32_t **) malloc(numberOfEntriesNAND*sizeof(int32_t *));
 	NANDFLASH = (int32_t*) malloc(numberOfEntriesNAND*stdimagesize*sizeof(int32_t));
 
-	createNANDFLASH(NANDFLASH, entriesOfNAND, stdimagesize, NUMBER_OF_IMAGES);
+	udp_createNANDFLASH(NANDFLASH, entriesOfNAND, stdimagesize, NUMBER_OF_IMAGES);
 	//END NAND FLASH Memory
 
 	printf("Read Disp from NAND to VRAM\n");
-	readNAND(entriesOfNAND[DISP_INDEX], DISP_ROWS, DISP_COLS, dispSdram);
+	udp_loadImage(entriesOfNAND[DISP_INDEX], DISP_ROWS, DISP_COLS, dispSdram);
 
 	//Create Mask of all images
 	printf("Creating mask of all images\n");
-	readNAND(entriesOfNAND[MASK_INDEX], ROWS, COLS, tmp1Sdram);
+	udp_loadImage(entriesOfNAND[MASK_INDEX], ROWS, COLS, tmp1Sdram);
 	for(int i=0; i < NUMBER_OF_IMAGES; i++){
-		readNAND(entriesOfNAND[i], ROWS, COLS, tmp2Sdram);
-		CHECK_STATUS(preprocessing_arith_maskImagesLog10(tmp2Sdram, ROWS, COLS, i, IMIN, IMAX, tmp1Sdram))
-	    writeNAND(tmp2Sdram, ROWS, COLS, entriesOfNAND[i]);
+		udp_loadImage(entriesOfNAND[i], ROWS, COLS, tmp2Sdram);
+		CHECK_STATUS(udp_maskImagesLog10(tmp2Sdram, ROWS, COLS, i, IMIN, IMAX, tmp1Sdram))
+		udp_storeImage(tmp2Sdram, ROWS, COLS, entriesOfNAND[i]);
 	}
 
-	writeNAND(tmp1Sdram, ROWS, COLS, entriesOfNAND[MASK_TMP_INDEX]);
+	udp_storeImage(tmp1Sdram, ROWS, COLS, entriesOfNAND[MASK_TMP_INDEX]);
 
 	printf("Mask created successfully!\n");
 
@@ -183,32 +181,23 @@ int main()
 				int dx = (int)eve_fp_subtract32(disp[piq + 1], disp[pir + 1])/FP32_BINARY_TRUE;
 
 				CHECK_STATUS(preprocessing_arith_doGetConst(tmp1Sdram, tmp2Sdram, tmp3Sdram, ROWS, COLS, dx, dy, iq, ir, tmp4Sdram, tmp5Sdram) )
-
-				CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp1Sdram))
-				CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp2Sdram))
-				CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp3Sdram))
 			}
 	}
 
-	writeNAND(tmp4Sdram, ROWS, COLS, entriesOfNAND[CONS_INDEX]);
-	writeNAND(tmp5Sdram, ROWS, COLS, entriesOfNAND[PIXCOUNT_INDEX]);
+	udp_storeImage(tmp4Sdram, ROWS, COLS, entriesOfNAND[CONS_INDEX]);
+	udp_storeImage(tmp5Sdram, ROWS, COLS, entriesOfNAND[PIXCOUNT_INDEX]);
 
 	printf("\n------------------------------------------------\n");
-	printf("---------Const calculates successfully---------\n");
+	printf("---------Const calculates successfully----------\n");
 	printf("------------------------------------------------\n");
 	//END CONST
 
-	CHECK_STATUS(preprocessing_arith_equalImages(tmp4Sdram, ROWS, COLS, tmp1Sdram))
-	CHECK_STATUS(preprocessing_arith_normalicer(tmp1Sdram, tmp5Sdram, ROWS, COLS, tmp1Sdram))
+	CHECK_STATUS(preprocessing_arith_addScalar(tmp4Sdram, ROWS, COLS, 0, tmp1Sdram))
+	CHECK_STATUS(udp_normalize(tmp1Sdram, tmp5Sdram, ROWS, COLS, tmp1Sdram))
 
 	//ITERA
-	CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp2Sdram))
-	CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp3Sdram))
-	CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp4Sdram))
-	CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp5Sdram))
-
 	printf("\n------------------------------------------------\n");
-	printf("-----------------Calculate Itera-----------------\n");
+	printf("-----------------Calculate Itera----------------\n");
 	printf("------------------------------------------------\n");
 	CHECK_STATUS(preprocessing_arith_iterate(dispSdram,
 			tmp2Sdram, tmp3Sdram, tmp4Sdram,
@@ -216,11 +205,9 @@ int main()
 	printf("\n------------------------------------------------\n");
 	printf("----------Itera calculated successfully----------\n");
 	printf("------------------------------------------------\n");
-
 	//END ITERA
 
-	readNAND(entriesOfNAND[CONS_INDEX], ROWS, COLS, tmp2Sdram);
-	writeImageToFile(tmp2, "im/const.fits", -1, 0, stdimagesize );
+	udp_storeImage(tmp1Sdram, ROWS, COLS, entriesOfNAND[GAIN_INDEX]);
 	writeImageToFile(tmp1, "im/Gain.fits", -1, 0, stdimagesize );
 
 	printf("Done!\n");
