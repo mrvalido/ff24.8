@@ -108,13 +108,13 @@ int preprocessing_arith_doIteration(uint32_t sdSrc, uint32_t sdTmp1, uint32_t sd
 	//Read Const from NAND (GainTmp)
 	udp_loadImage(entriesOfNAND[CONS_INDEX], ROWS, COLS, sdTmp1);
 
-	for(unsigned short iq = 1; iq < NUMBER_OF_IMAGES; iq++) {
+	for(unsigned int iq = 1; iq < NUMBER_OF_IMAGES; iq++) {
 
-		for(unsigned short ir = 0; ir < iq; ir++) {
+		for(unsigned int ir = 0; ir < iq; ir++) {
 
 			//Calculate point
-			piq = iq*DISP_COLS;
-			pir = ir*DISP_COLS;
+			piq = iq*(unsigned int)DISP_COLS;
+			pir = ir*(unsigned int)DISP_COLS;
 
 			// Check for valid pointer position.
 			PREPROCESSING_DEF_CHECK_POINTER(src, piq, sizeDisp);

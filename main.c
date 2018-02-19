@@ -43,6 +43,7 @@ void writeImageToFile(int32_t *img, char *fileName, int positionIndex,  int inde
 
 
 
+
 /*
  * * * * * * *
  * * MAIN  * *
@@ -158,17 +159,17 @@ int main()
 	unsigned int piq = 0;
 	unsigned int pir = 0;
 
-	for(unsigned short iq = 1; iq < NUMBER_OF_IMAGES; iq++) {
+	for(unsigned int iq = 1; iq < NUMBER_OF_IMAGES; iq++) {
 		printf("--------------------------\n");
 		printf("Calculate image %d with:\n", iq);
 		printf("--------------------------\n");
 
-			for(unsigned short ir = 0; ir < iq; ir++) {
+			for(unsigned int ir = 0; ir < iq; ir++) {
 				printf("\t -Image %d\n", ir);
 
 				//Calculate point
-				piq = iq*DISP_COLS;
-				pir = ir*DISP_COLS;
+				piq = iq*(unsigned int)DISP_COLS;
+				pir = ir*(unsigned int)DISP_COLS;
 
 				// Check for valid pointer position.
 				PREPROCESSING_DEF_CHECK_POINTER(disp, piq, sizeDisp);

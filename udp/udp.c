@@ -177,7 +177,7 @@ int udp_storeImage(uint32_t sdSrc, uint16_t rows, uint16_t cols,
 int udp_getMask(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint16_t index, uint32_t sdDst)
 {
     int status = PREPROCESSING_SUCCESSFUL;
-    unsigned int size = (unsigned int)(rows) * cols;
+    unsigned int size = (unsigned int)(rows) * (unsigned int)(cols);
     unsigned int p = 0;
 
     const int32_t* src = preprocessing_vmem_getDataAddress(sdSrc);
@@ -191,11 +191,11 @@ int udp_getMask(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint16_t index, ui
     }
 
     // Process.
-    for (unsigned int r = 0; r < rows; r++)
+    for (unsigned int r = 0; r < (unsigned int)rows; r++)
     {
-        for (unsigned int c = 0; c < cols; c++)
+        for (unsigned int c = 0; c < (unsigned int)cols; c++)
         {
-            p = r * cols + c;
+            p = r * (unsigned int)(cols) + c;
 
             // Check for valid pointer position.
             PREPROCESSING_DEF_CHECK_POINTER(src, p, size);
@@ -216,7 +216,7 @@ int udp_getMask(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint16_t index, ui
 int udp_maskImagesLog10(uint32_t sdSrc,
             uint16_t rows, uint16_t cols, uint16_t index, uint32_t iMin, uint32_t iMax, uint32_t sdDst){
     int status = PREPROCESSING_SUCCESSFUL;
-    unsigned int size = (unsigned int)(rows) * cols;
+    unsigned int size = (unsigned int)(rows) * (unsigned int)(cols);
     unsigned int p = 0;
     unsigned int mskTmp = 0;
 
@@ -232,11 +232,11 @@ int udp_maskImagesLog10(uint32_t sdSrc,
         return PREPROCESSING_INVALID_SIZE;
     }
 
-    for (unsigned int r = 0; r < rows; r++)
+    for (unsigned int r = 0; r < (unsigned int)rows; r++)
 	{
-		for (unsigned int c = 0; c < cols; c++)
+		for (unsigned int c = 0; c < (unsigned int)cols; c++)
 		{
-			p = r * cols + c;
+			p = r * (unsigned int)(cols) + c;
 
 			// Check for valid pointer position.
 			PREPROCESSING_DEF_CHECK_POINTER(src, p, size);
@@ -274,15 +274,15 @@ int udp_createROI(uint32_t sdSrc, uint16_t rows, uint16_t cols,
 		   int16_t dx, int16_t dy, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
-	unsigned int size = (unsigned int)(rows) * cols;
+	unsigned int size = (unsigned int)(rows) * (unsigned int)(cols);
 	unsigned int p = 0;
 	unsigned int roiPoint = 0;
 
 	//Calculate window edges
-	unsigned int jyl = udp_max16(0, -dy);				//Row
-	unsigned int jyh = udp_min16(0, -dy) + rows; 	//Row
-	unsigned int jxl = udp_max16(0, -dx); 				//Column
-	unsigned int jxh = udp_min16(0, -dx) + cols; 	//Column
+	unsigned int jyl = (unsigned int)udp_max16(0, -dy);				//Row
+	unsigned int jyh = (unsigned int)(udp_min16(0, -dy) + rows); 	//Row
+	unsigned int jxl = (unsigned int)udp_max16(0, -dx); 			//Column
+	unsigned int jxh = (unsigned int)(udp_min16(0, -dx) + cols); 	//Column
 
 	const int32_t* src = preprocessing_vmem_getDataAddress(sdSrc);
 	int32_t* dst = preprocessing_vmem_getDataAddress(sdDst);
@@ -295,11 +295,11 @@ int udp_createROI(uint32_t sdSrc, uint16_t rows, uint16_t cols,
 	}
 
 	//Calculate ROI
-	for(int y=jyl; y < jyh; y++){
-		for(int x=jxl; x < jxh; x++){
+	for(unsigned int y=jyl; y < jyh; y++){
+		for(unsigned int x=jxl; x < jxh; x++){
 
-			p = y * cols + x;
-			roiPoint = (y-jyl) * cols + (x-jxl);
+			p = y * (unsigned int)cols + x;
+			roiPoint = (y-jyl) * (unsigned int)cols + (x-jxl);
 
 			// Check for valid pointer position.
 			PREPROCESSING_DEF_CHECK_POINTER(src, p, size);
@@ -321,13 +321,13 @@ int udp_addROI(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t cols,
 		   int16_t dx, int16_t dy, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
-	unsigned int size = (unsigned int)(rows) * cols;
+	unsigned int size = (unsigned int)(rows) * (unsigned int)(cols);
 	unsigned int p = 0;
 	unsigned int roiPoint = 0;
 
 	// Calculate window edges
-	unsigned int jyl = udp_max16(0, -dy), jyh = udp_min16(0, -dy) + rows; 	// ROWS
-	unsigned int jxl = udp_max16(0, -dx), jxh = udp_min16(0, -dx) + cols; 		// COLUMNS
+	unsigned int jyl = (unsigned int)udp_max16(0, -dy), jyh = (unsigned int)(udp_min16(0, -dy) + rows); 	// ROWS
+	unsigned int jxl = (unsigned int)udp_max16(0, -dx), jxh = (unsigned int)(udp_min16(0, -dx) + cols); 	// COLUMNS
 
 	const int32_t* src1 = preprocessing_vmem_getDataAddress(sdSrc1);
 	const int32_t* src2 = preprocessing_vmem_getDataAddress(sdSrc2);
@@ -345,8 +345,8 @@ int udp_addROI(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t cols,
 	for(int y=jyl; y < jyh; y++){
 		for(int x=jxl; x < jxh; x++){
 
-			p = y * cols + x;
-			roiPoint = (y-jyl) * cols + (x-jxl);
+			p = y * (unsigned int)(cols) + x;
+			roiPoint = (y-jyl)*(unsigned int)(cols) + (x-jxl);
 
 			// Check for valid pointer position.
 			PREPROCESSING_DEF_CHECK_POINTER(src1, p, size);
@@ -369,13 +369,13 @@ int udp_substractROI(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t c
 		   int16_t dx, int16_t dy, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
-	unsigned int size = (unsigned int)(rows) * cols;
+	unsigned int size = (unsigned int)(rows) * (unsigned int)(cols);
 	unsigned int p = 0;
 	unsigned int roiPoint = 0;
 
 	// Calculate window edges
-	unsigned int jyl = udp_max16(0, -dy), jyh = udp_min16(0, -dy) + rows; 	// ROWS
-	unsigned int jxl = udp_max16(0, -dx), jxh = udp_min16(0, -dx) + cols; 		// COLUMNS
+	unsigned int jyl = (unsigned int)udp_max16(0, -dy), jyh = (unsigned int)(udp_min16(0, -dy) + rows); 	// ROWS
+	unsigned int jxl = (unsigned int)udp_max16(0, -dx), jxh = (unsigned int)(udp_min16(0, -dx) + cols); 	// COLUMNS
 
 	const int32_t* src1 = preprocessing_vmem_getDataAddress(sdSrc1);
 	const int32_t* src2 = preprocessing_vmem_getDataAddress(sdSrc2);
@@ -393,8 +393,8 @@ int udp_substractROI(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t c
 	for(int y=jyl; y < jyh; y++){
 		for(int x=jxl; x < jxh; x++){
 
-			p = y * cols + x;
-			roiPoint = (y-jyl) * cols + (x-jxl);
+			p = y * (unsigned int)cols + x;
+			roiPoint = (y-jyl) * (unsigned int)cols + (x-jxl);
 
 			// Check for valid pointer position.
 			PREPROCESSING_DEF_CHECK_POINTER(src1, p, size);
@@ -416,7 +416,7 @@ int udp_substractROI(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t c
 int udp_normalize(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t cols, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
-	unsigned int size = (unsigned int)(rows) * cols;
+	unsigned int size = (unsigned int)(rows) * (unsigned int)(cols);
 	unsigned int p = 0;
 
 	uint32_t one = FP32_BINARY_TRUE;
@@ -434,11 +434,11 @@ int udp_normalize(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t cols
 	}
 
 	// Process.
-	for (unsigned int r = 0; r < rows; r++)
+	for (unsigned int r = 0; r < (unsigned int)rows; r++)
 	{
-		for (unsigned int c = 0; c < cols; c++)
+		for (unsigned int c = 0; c < (unsigned int)cols; c++)
 		{
-			p = r * cols + c;
+			p = r * (unsigned int)(cols) + c;
 
 			// Check for valid pointer position.
 			PREPROCESSING_DEF_CHECK_POINTER(src1, p, size);
@@ -460,7 +460,7 @@ int udp_normalize(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t cols
 int udp_mean(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t cols, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
-	unsigned int size = (unsigned int)(rows) * cols;
+	unsigned int size = (unsigned int)(rows) * (unsigned int)(cols);
 	unsigned int p = 0;
 
 	int npix = 0;
@@ -481,11 +481,11 @@ int udp_mean(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t cols, uin
 	}
 
 	// Process.
-	for (unsigned int r = 0; r < rows; r++)
+	for (unsigned int r = 0; r < (unsigned int)rows; r++)
 	{
-		for (unsigned int c = 0; c < cols; c++)
+		for (unsigned int c = 0; c < (unsigned int)cols; c++)
 		{
-			p = r * cols + c;
+			p = r * (unsigned int)(cols) + c;
 
 			// Check for valid pointer position.
 			PREPROCESSING_DEF_CHECK_POINTER(src1, p, size);
@@ -509,7 +509,7 @@ int udp_mean(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t cols, uin
 	dst[0] = eve_fp_divide32(sum2, npixFixed, FP32_FWL);		//Mean
 
 	//Calculate 5 sigma
-	//Original ->  5*sqrt( (sum3/npix) - dst[0]*dst[0] );
+	//Original ->  5*sqrt( (sum3/npix) - dst[0]^2 );
 	uint32_t fiveFixed = eve_fp_int2s32(5, FP32_FWL);
 	uint32_t sum3DividedByNpix = eve_fp_divide32(sum3, npixFixed, FP32_FWL);
 	uint32_t pow2mean = eve_fp_multiply32(dst[0], dst[0], FP32_FWL);
@@ -530,7 +530,7 @@ int udp_mean(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t cols, uin
 int udp_fivesigma(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint32_t mean, uint32_t fiveSigma, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
-	unsigned int size = (unsigned int)(rows) * cols;
+	unsigned int size = (unsigned int)(rows) * (unsigned int)(cols);
 	unsigned int p = 0;
 
 	int npix = 0;
@@ -549,11 +549,11 @@ int udp_fivesigma(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint32_t mean, u
 	}
 
 	// Process.
-	for (unsigned int r = 0; r < rows; r++)
+	for (unsigned int r = 0; r < (unsigned int)rows; r++)
 	{
-		for (unsigned int c = 0; c < cols; c++)
+		for (unsigned int c = 0; c < (unsigned int)cols; c++)
 		{
-			p = r * cols + c;
+			p = r * (unsigned int)(cols) + c;
 
 			// Check for valid pointer position.
 			PREPROCESSING_DEF_CHECK_POINTER(src, p, size);
@@ -588,14 +588,14 @@ int udp_fivesigma(uint32_t sdSrc, uint16_t rows, uint16_t cols, uint32_t mean, u
 int udp_flatfield(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t cols, uint32_t sdDst){
 
 	int status = PREPROCESSING_SUCCESSFUL;
-	unsigned int size = (unsigned int)(rows) * cols;
+	unsigned int size = (unsigned int)(rows) * (unsigned int)(cols);
 	unsigned int p = 0;
 
 	uint32_t zero = 0;
 
 	const int32_t* src1 = preprocessing_vmem_getDataAddress(sdSrc1);		//GainTmp
 	const int32_t* src2 = preprocessing_vmem_getDataAddress(sdSrc2);		//Mask of all images
-	int32_t* dst = preprocessing_vmem_getDataAddress(sdDst);						//Flatfield
+	int32_t* dst = preprocessing_vmem_getDataAddress(sdDst);				//Flatfield
 
 	// Check whether given rows and columns are in a valid range.
 	if ((!preprocessing_vmem_isProcessingSizeValid(sdSrc1, rows, cols))
@@ -606,11 +606,11 @@ int udp_flatfield(uint32_t sdSrc1, uint32_t sdSrc2, uint16_t rows, uint16_t cols
 	}
 
 	// Process.
-	for (unsigned int r = 0; r < rows; r++)
+	for (unsigned int r = 0; r < (unsigned int)rows; r++)
 	{
-		for (unsigned int c = 0; c < cols; c++)
+		for (unsigned int c = 0; c < (unsigned int)cols; c++)
 		{
-			p = r * cols + c;
+			p = r * (unsigned int)(cols) + c;
 
 			// Check for valid pointer position.
 			PREPROCESSING_DEF_CHECK_POINTER(src1, p, size);
